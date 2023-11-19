@@ -1,0 +1,17 @@
+name: emimechanicalmodel
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+    - python
+    - pip
+    - fenics
+    - scipy
+    - numpy
+    - matplotlib
+    - mpi4py
+    - cyipopt
+    - opencv-python
+    - dask
+    - pip:
+      - git+https://github.com/dolfin-adjoint/pyadjoint.git

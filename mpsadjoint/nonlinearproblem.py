@@ -35,13 +35,13 @@ class NonlinearProblem(df.NonlinearProblem):
 
         """
         da.assemble(self.linear_form, tensor=b)
-        
+
         if isinstance(self.bcs, list):
             for bc in self.bcs:
                 bc.apply(b, x)
         else:
             self.bcs.apply(b, x)
-    
+
     def J(self, A, x):
         """
 
@@ -53,7 +53,7 @@ class NonlinearProblem(df.NonlinearProblem):
 
         """
         da.assemble(self.bilinear_form, tensor=A)
-        
+
         if isinstance(self.bcs, list):
             for bc in self.bcs:
                 bc.apply(A)

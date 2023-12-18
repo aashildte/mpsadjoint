@@ -13,8 +13,6 @@ from dask.diagnostics import ProgressBar
 import mps
 import matplotlib.pyplot as plt
 
-from scipy import ndimage as nd
-
 
 def to_uint8(img):
     img_float = img.astype(float)
@@ -182,9 +180,9 @@ def get_displacements(
 
 def get_pacing_intervals(data):
     pacing = data.pacing[:]
-    
+
     if np.max(pacing) == 0.0:
-        return [(0, len(pacing)-1)]  # no pacing
+        return [(0, len(pacing) - 1)]  # no pacing
 
     interval_start = []
 
@@ -195,7 +193,7 @@ def get_pacing_intervals(data):
     interval_stop = [i - 1 for i in interval_start[1:]]
 
     intervals = []
-    for (start, stop) in zip(interval_start, interval_stop):
+    for start, stop in zip(interval_start, interval_stop):
         intervals.append((start, stop))
 
     return np.array(intervals)
@@ -204,34 +202,36 @@ def get_pacing_intervals(data):
 def process_displacement(path, reference_time_step):
     data = mps.MPS(path)
     file_id = path.split(".")[0]
-    intervals = get_pacing_intervals(data) 
+    intervals = get_pacing_intervals(data)
 
     um_per_pixel = data.info["um_per_pixel"]
-    
-    dt = data.info["dt"]
-    ref = data.frames[:, :, reference_time_step-5:reference_time_step].mean(2)
-    
-    ref_shape = ref.shape[0]*ref.shape[1]
-    #print(np.linalg.norm(ref)/ref_shape)
 
-    u = um_per_pixel*get_displacements(data.frames[:, :, :], reference_image=ref)
+    dt = data.info["dt"]
+    ref = data.frames[:, :, reference_time_step - 5 : reference_time_step].mean(2)
+
+    ref_shape = ref.shape[0] * ref.shape[1]
+    # print(np.linalg.norm(ref)/ref_shape)
+
+    u = um_per_pixel * get_displacements(data.frames[:, :, :], reference_image=ref)
 
     X, Y, T, _ = u.shape
-    
+
     num_beats = 0
     all_beats = []
 
-    for index in range(reference_time_step, T-200, 200):
-        all_beats.append(u[:,:,index:index+200])
+    for index in range(reference_time_step, T - 200, 200):
+        all_beats.append(u[:, :, index : index + 200])
         num_beats += 1
 
     avg_beat = np.mean(np.array(all_beats), axis=0)
     avg_beat = average_data_in_time(avg_beat)
 
-    c1 = np.linalg.norm(avg_beat, axis=3) # norm over (x,y)-koordinat -> X x Y x T-shape
-    c2 = np.mean(c1, axis=(0, 1))         # average over (X,Y) -> T-shape
+    c1 = np.linalg.norm(
+        avg_beat, axis=3
+    )  # norm over (x,y)-koordinat -> X x Y x T-shape
+    c2 = np.mean(c1, axis=(0, 1))  # average over (X,Y) -> T-shape
 
-    time = [dt*t for t in range(0, len(c2))]
+    time = [dt * t for t in range(0, len(c2))]
 
     plt.plot(time, c2)
 
@@ -239,24 +239,28 @@ def process_displacement(path, reference_time_step):
     plt.ylabel("Time (ms)")
 
     print("Saving displacement trace to " + file_id + ".png")
-    #plt.savefig(file_id + "_beat.png", dpi=300)
-    
+    # plt.savefig(file_id + "_beat.png", dpi=300)
+
     # move time forward as first axis
     u1 = da.swapaxes(avg_beat, 1, 2)
     u2 = da.swapaxes(u1, 0, 1)
- 
+
     # save dispacement here
     np.save(f"{file_id}_displacement_avg_beat_smoothing_factor_5.npy", u2.compute())
-    
+
+
 if __name__ == "__main__":
-    #process_displacement("experiments/AshildData/20211126_bayK_chipB/Control/20211126-GCaMP80HCF20-BayK_Stream_B01_s1_TL-20.tif", 169)
-    process_displacement("experiments/AshildData/20211126_bayK_chipB/10nM/20211126-GCaMP80HCF20-BayK_Stream_B01_s1_TL-20.tif", 124)
-    #process_displacement("experiments/AshildData/20211126_bayK_chipB/100nM/20211126-GCaMP80HCF20-BayK_Stream_B01_s1_TL-20.tif", 141)
-    #process_displacement("experiments/AshildData/20211126_bayK_chipB/1000nM/20211126-GCaMP80HCF20-BayK_Stream_B01_s1_TL-20.tif", 154)
-    #process_displacement("experiments/AshildData/20220105_omecamtiv_chipB/control/20220105-80GCaMP20HCF-omecamtiv_Stream_B01_s1_TL-20-Stream.tif", 60)
-    #process_displacement("experiments/AshildData/20220105_omecamtiv_chipB/1 nM/20220105-80GCaMP20HCF-omecamtiv_Stream_B01_s1_TL-20-Stream.tif", 241)
-    #process_displacement("experiments/AshildData/20220105_omecamtiv_chipB/10 nM/20220105-80GCaMP20HCF-omecamtiv_Stream_B01_s1_TL-20-Stream.tif", 196)
-    #process_displacement("experiments/AshildData/20220105_omecamtiv_chipB/100nM/20220105-80GCaMP20HCF-omecamtiv_Stream_B01_s1_TL-20-Stream.tif", 249)
-    #process_displacement("experiments/AshildData/20220105_omecamtiv_chipB/1000nM/20220105-80GCaMP20HCF-omecamtiv_Stream_B01_s1_TL-20-Stream.tif", 152)
+    # process_displacement("experiments/AshildData/20211126_bayK_chipB/Control/20211126-GCaMP80HCF20-BayK_Stream_B01_s1_TL-20.tif", 169)
+    process_displacement(
+        "experiments/AshildData/20211126_bayK_chipB/10nM/20211126-GCaMP80HCF20-BayK_Stream_B01_s1_TL-20.tif",
+        124,
+    )
+    # process_displacement("experiments/AshildData/20211126_bayK_chipB/100nM/20211126-GCaMP80HCF20-BayK_Stream_B01_s1_TL-20.tif", 141)
+    # process_displacement("experiments/AshildData/20211126_bayK_chipB/1000nM/20211126-GCaMP80HCF20-BayK_Stream_B01_s1_TL-20.tif", 154)
+    # process_displacement("experiments/AshildData/20220105_omecamtiv_chipB/control/20220105-80GCaMP20HCF-omecamtiv_Stream_B01_s1_TL-20-Stream.tif", 60)
+    # process_displacement("experiments/AshildData/20220105_omecamtiv_chipB/1 nM/20220105-80GCaMP20HCF-omecamtiv_Stream_B01_s1_TL-20-Stream.tif", 241)
+    # process_displacement("experiments/AshildData/20220105_omecamtiv_chipB/10 nM/20220105-80GCaMP20HCF-omecamtiv_Stream_B01_s1_TL-20-Stream.tif", 196)
+    # process_displacement("experiments/AshildData/20220105_omecamtiv_chipB/100nM/20220105-80GCaMP20HCF-omecamtiv_Stream_B01_s1_TL-20-Stream.tif", 249)
+    # process_displacement("experiments/AshildData/20220105_omecamtiv_chipB/1000nM/20220105-80GCaMP20HCF-omecamtiv_Stream_B01_s1_TL-20-Stream.tif", 152)
 
     plt.show()

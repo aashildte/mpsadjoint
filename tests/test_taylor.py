@@ -1,4 +1,3 @@
-import numpy as np
 import dolfin as df
 import dolfin_adjoint as da
 
@@ -14,17 +13,16 @@ from mpsadjoint.mesh_setup import Geometry
 
 
 def setup_mesh_funspaces():
-    
     mesh = da.UnitSquareMesh(1, 1)
 
-    pillar_bcs= df.MeshFunction("size_t", mesh, 1, 0)
+    pillar_bcs = df.MeshFunction("size_t", mesh, 1, 0)
     pillar_bcs.array()[:] = 0
     pillar_bcs.array()[0] = 1
-    
-    ds = df.Measure('ds', domain=mesh, subdomain_data=pillar_bcs)
+
+    ds = df.Measure("ds", domain=mesh, subdomain_data=pillar_bcs)
 
     geometry = Geometry(mesh, ds)
-    
+
     TH = define_state_space(geometry.mesh)
     bcs = define_bcs(TH)
 
@@ -53,7 +51,6 @@ def errornorm(u, u_synthetic, mesh):
 
 
 def test_taylor_unit_cube():
-
     TH, bcs, geometry = setup_mesh_funspaces()
     mesh = geometry.mesh
 

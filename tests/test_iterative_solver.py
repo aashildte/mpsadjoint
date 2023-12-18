@@ -14,18 +14,18 @@ from mpsadjoint import (
 from mpsadjoint.mesh_setup import Geometry
 from mpsadjoint.nonlinearproblem import NonlinearProblem
 
+
 def setup_mesh_funspaces():
-    
     mesh = da.UnitSquareMesh(1, 1)
 
-    pillar_bcs= df.MeshFunction("size_t", mesh, 1, 0)
+    pillar_bcs = df.MeshFunction("size_t", mesh, 1, 0)
     pillar_bcs.array()[:] = 0
     pillar_bcs.array()[0] = 1
-    
-    ds = df.Measure('ds', domain=mesh, subdomain_data=pillar_bcs)
+
+    ds = df.Measure("ds", domain=mesh, subdomain_data=pillar_bcs)
 
     geometry = Geometry(mesh, ds)
-    
+
     TH = define_state_space(geometry.mesh)
     bcs = define_bcs(TH)
 
@@ -37,12 +37,7 @@ def create_forward_problem_unit_cube(TH, active, theta, geometry, bcs):
 
     V, _ = TH.split()
 
-    R, state = define_weak_form(
-        TH,
-        active,
-        theta,
-        geometry.ds
-    )
+    R, state = define_weak_form(TH, active, theta, geometry.ds)
 
     problem = NonlinearProblem(R, state, bcs)
     solver = da.NewtonSolver()
@@ -59,7 +54,6 @@ def create_forward_problem_unit_cube(TH, active, theta, geometry, bcs):
     ],
 )
 def test_iterative_solver(peak_active, peak_theta):
-    
     TH, bcs, geometry = setup_mesh_funspaces()
 
     U = df.FunctionSpace(geometry.mesh, "CG", 1)
@@ -69,7 +63,9 @@ def test_iterative_solver(peak_active, peak_theta):
     theta = da.Function(U)
     theta.interpolate(da.Constant(0.005))
 
-    state, solver, problem = create_forward_problem_unit_cube(TH, active, theta, geometry, bcs)
+    state, solver, problem = create_forward_problem_unit_cube(
+        TH, active, theta, geometry, bcs
+    )
 
     original_state_values = state.vector()[:]
 

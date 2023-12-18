@@ -21,20 +21,24 @@ def test_cost_diff_constant_u(u_model_arr, expected_cost_diff):
     V = df.VectorFunctionSpace(mesh, "CG", 1)
     u_model = da.Function(V)
     u_data = da.Function(V)
-   
-    exp = da.Expression(("ax", "ay"), ax=u_model_arr[0], ay=u_model_arr[1], element = V.ufl_element())
+
+    exp = da.Expression(
+        ("ax", "ay"), ax=u_model_arr[0], ay=u_model_arr[1], element=V.ufl_element()
+    )
     u_data.interpolate(exp)
     u_model.assign(da.Constant((0.0, 0.0)))
 
     geometry = Geometry(
-        mesh=mesh, ds=None,
+        mesh=mesh,
+        ds=None,
     )
-    
+
     cost_diff = mpsadjoint.inverse.cost_function(geometry, [u_model], [u_data])
 
     print(cost_diff)
 
     assert math.isclose(cost_diff, expected_cost_diff)
+
 
 @pytest.mark.parametrize(
     "u_model_arr, expected_cost_diff",
@@ -50,17 +54,23 @@ def test_cost_diff_varying_u(u_model_arr, expected_cost_diff):
     V = df.VectorFunctionSpace(mesh, "CG", 1)
     u_model = da.Function(V)
     u_data = da.Function(V)
-   
-    exp = da.Expression(("ax + x[0]", "ay + x[1]"), ax=u_model_arr[0], ay=u_model_arr[1], element = V.ufl_element())
+
+    exp = da.Expression(
+        ("ax + x[0]", "ay + x[1]"),
+        ax=u_model_arr[0],
+        ay=u_model_arr[1],
+        element=V.ufl_element(),
+    )
     u_data.interpolate(exp)
     u_model.assign(da.Constant((0.0, 0.0)))
 
     geometry = Geometry(
-        mesh=mesh, ds=None,
+        mesh=mesh,
+        ds=None,
     )
-    
+
     cost_diff = mpsadjoint.inverse.cost_function(geometry, [u_model], [u_data])
-    
+
     print(cost_diff)
 
     assert math.isclose(cost_diff, expected_cost_diff)
@@ -75,11 +85,13 @@ def test_cost_function():
     controls = [da.Function(U)]
 
     geometry = Geometry(
-        mesh=mesh, ds=None,
+        mesh=mesh,
+        ds=None,
     )
     cost = mpsadjoint.inverse.cost_function(geometry, [u_model], [u_data])
-    
+
     assert math.isclose(cost, 0.0)
+
 
 if __name__ == "__main__":
     test_cost_function()

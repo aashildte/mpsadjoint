@@ -6,7 +6,6 @@ Loads mesh + bc surfaces for pillars
 
 """
 
-import numpy as np
 import os
 import dolfin as df
 import dolfin_adjoint as da
@@ -16,8 +15,8 @@ from collections import namedtuple
 
 Geometry = namedtuple("Geometry", ["mesh", "ds"])
 
-def load_mesh_h5(filename: os.PathLike, save_pvd_file: bool = False) -> Geometry:
 
+def load_mesh_h5(filename: os.PathLike, save_pvd_file: bool = False) -> Geometry:
     comm = MPI.COMM_WORLD
     filename = Path(filename)
     if not filename.is_file():
@@ -40,6 +39,6 @@ def load_mesh_h5(filename: os.PathLike, save_pvd_file: bool = False) -> Geometry
 
     print(f"Number of nodes: {nodes}, number of elements: {cells}")
 
-    ds = df.Measure('ds', domain=mesh, subdomain_data=pillar_bcs)
+    ds = df.Measure("ds", domain=mesh, subdomain_data=pillar_bcs)
 
     return Geometry(mesh=mesh, ds=ds)

@@ -8,6 +8,7 @@ import dolfin as df
 import dolfin_adjoint as da
 import numpy as np
 
+
 def set_fenics_parameters():
     """
 
@@ -36,16 +37,16 @@ def cond(a, k=100):
 
     """
 
-    return a / (1 + df.exp(-k*a))
+    return a / (1 + df.exp(-k * a))
 
 
 def psi_holzapfel(
-        IIFx,
-        I4e1,
-        a=da.Constant(2.28),
-        af=da.Constant(9.726),
-        b=da.Constant(1.685),
-        bf=da.Constant(15.779),
+    IIFx,
+    I4e1,
+    a=da.Constant(2.28),
+    af=da.Constant(9.726),
+    b=da.Constant(1.685),
+    bf=da.Constant(15.779),
 ):
     """
 
@@ -72,7 +73,7 @@ def psi_holzapfel(
 
 def psi_neohookean(IIFx, C10=da.Constant(2000)):
     """
-    
+
     Args:
         IIFx - first invariant, tr(C)
 
@@ -81,7 +82,7 @@ def psi_neohookean(IIFx, C10=da.Constant(2000)):
 
     """
 
-    return C10/2*(IIFx - 2)
+    return C10 / 2 * (IIFx - 2)
 
 
 def fiber_direction(theta):
@@ -130,13 +131,13 @@ def PK_stress_tensor(F, p, active_function, mat_params_tissue, theta):
     Jm1 = pow(J, -1.0)
 
     I1 = Jm23 * df.tr(C)
-    
+
     f0 = fiber_direction(theta)
     I4f = Jm1 * df.inner(C * f0, f0)
 
     mgamma = 1 - active_function
-    I1e = mgamma * I1 + (1 / mgamma ** 2 - mgamma) * I4f
-    I4fe = 1 / mgamma ** 2 * I4f
+    I1e = mgamma * I1 + (1 / mgamma**2 - mgamma) * I4f
+    I4fe = 1 / mgamma**2 * I4f
 
     psi = psi_holzapfel(I1e, I4fe, **mat_params_tissue)
     PK1 = df.diff(psi, F) + p * Jm23 * J * df.inv(F.T)
@@ -156,7 +157,7 @@ def PK_stress_tensor(F, p, active_function, mat_params_tissue, theta):
     psi = psi_active + psi_passive + psi_comp
     PK1 = df.diff(psi, F)
     """
-    
+
     return PK1
 
 
@@ -176,7 +177,7 @@ def define_state_space(mesh):
 
     P2 = df.VectorElement("Lagrange", mesh.ufl_cell(), 2)
     P1 = df.FiniteElement("Lagrange", mesh.ufl_cell(), 1)
-    
+
     TH = df.FunctionSpace(mesh, df.MixedElement([P2, P1]))
 
     return TH
@@ -201,7 +202,7 @@ def define_bcs(TH):
     bcs = [da.DirichletBC(V, da.Constant(np.zeros(2)), xmin_bnd)]
 
     return bcs
-    
+
 
 def remove_rigid_motion_term(mesh, u, r, state, test_state):
     """
@@ -233,13 +234,12 @@ def remove_rigid_motion_term(mesh, u, r, state, test_state):
     return df.derivative(Pi, state, test_state)
 
 
-
 def define_weak_form(
-        TH,
-        active_function,
-        theta,
-        ds,
-        mat_params_tissue = {},
+    TH,
+    active_function,
+    theta,
+    ds,
+    mat_params_tissue={},
 ):
     """
 
@@ -249,7 +249,7 @@ def define_weak_form(
         TH - a taylor-hood function space (P2-P1)
         active_function - active tension (gamma)
         theta - fiber direciton angle
-        xi_tissue - char. function defining the tissue 
+        xi_tissue - char. function defining the tissue
         xi_pillars - char. function defining the pillars
 
     Returns
@@ -269,14 +269,14 @@ def define_weak_form(
     PK1 = PK_stress_tensor(F, p, active_function, mat_params_tissue, theta)
 
     elasticity_term = df.inner(PK1, df.grad(v)) * df.dx
-    pressure_term   = q * (J - 1) * df.dx
+    pressure_term = q * (J - 1) * df.dx
 
     robin_value = da.Constant(1.0)
     robin_marker = 1
     robin_bcs_term = df.inner(robin_value * u, v) * ds(robin_marker)
- 
+
     weak_form = elasticity_term + pressure_term + robin_bcs_term
-    
+
     return weak_form, state
 
 
@@ -301,7 +301,16 @@ def assign_new_values(control_function, new_values):
     control_function.vector()[:] = new_values
 
 
-def solve_forward_problem_iteratively(active_function, theta_function, state_function, newtonsolver, problem, active, theta, step_length=0.1):
+def solve_forward_problem_iteratively(
+    active_function,
+    theta_function,
+    state_function,
+    newtonsolver,
+    problem,
+    active,
+    theta,
+    step_length=0.1,
+):
     """
 
     Solves the system iteratively, goint from zero to the one given by active and theta (usually
@@ -323,7 +332,7 @@ def solve_forward_problem_iteratively(active_function, theta_function, state_fun
 
     """
 
-    assert step_length > 1E-14, "Error: Really low step length – aborting"
+    assert step_length > 1e-14, "Error: Really low step length – aborting"
     assert step_length <= 1.0, "Error: Step length can't be > 1."
 
     original_active_values = get_control_values(active_function)
@@ -335,22 +344,26 @@ def solve_forward_problem_iteratively(active_function, theta_function, state_fun
     original_state_values = state_function.vector()[:]
 
     N = int(1 / step_length)
-    
+
     print(f"Solving system iteratively using {N + 1} steps.")
-    
+
     try:
         for n in range(N):
             print(f"* Solving for step {n + 1} / {N + 1}")
-            new_active_values = original_active_values + n * step_length * (active_values - original_active_values)
-            new_theta_values = original_theta_values + n * step_length * (theta_values - original_theta_values)
+            new_active_values = original_active_values + n * step_length * (
+                active_values - original_active_values
+            )
+            new_theta_values = original_theta_values + n * step_length * (
+                theta_values - original_theta_values
+            )
 
             assign_new_values(theta_function, new_theta_values)
             assign_new_values(active_function, new_active_values)
             newtonsolver.solve(problem, state_function.vector())
-        
+
         # then one final solve
         print(f"* Solving for final step {N + 1} / {N + 1}")
-        
+
         assign_new_values(theta_function, theta_values)
         assign_new_values(active_function, active_values)
         newtonsolver.solve(problem, state_function.vector())
@@ -363,5 +376,14 @@ def solve_forward_problem_iteratively(active_function, theta_function, state_fun
         assign_new_values(state_function, original_state_values)
 
         print("Error in iterative solve; trying with a smaller value.")
-        print("Step length: ", step_length/2)
-        solve_forward_problem_iteratively(active_function, theta_function, state_function, newtonsolver, problem, active, theta, step_length/2)
+        print("Step length: ", step_length / 2)
+        solve_forward_problem_iteratively(
+            active_function,
+            theta_function,
+            state_function,
+            newtonsolver,
+            problem,
+            active,
+            theta,
+            step_length / 2,
+        )

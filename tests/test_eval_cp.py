@@ -4,12 +4,10 @@ import dolfin_adjoint as da
 
 from mpsadjoint import (
     set_fenics_parameters,
-    load_mesh_h5,
     define_state_space,
     define_bcs,
     define_weak_form,
     solve_forward_problem,
-    solve_inverse_problem,
 )
 
 from mpsadjoint.mesh_setup import Geometry
@@ -18,19 +16,19 @@ from mpsadjoint.inverse import (
     cost_function,
 )
 
+
 def setup_mesh_funspaces():
-    
     set_fenics_parameters()
-    
+
     mesh = da.UnitSquareMesh(1, 1)
 
     pillar_bcs = df.MeshFunction("size_t", mesh, 1, 0)
-    pillar_bcs.array()[:] = 0    
-    pillar_bcs.array()[0] = 1    
-    
-    ds = df.Measure('ds', domain=mesh, subdomain_data=pillar_bcs)
+    pillar_bcs.array()[:] = 0
+    pillar_bcs.array()[0] = 1
+
+    ds = df.Measure("ds", domain=mesh, subdomain_data=pillar_bcs)
     geometry = Geometry(mesh, ds)
-    
+
     TH = define_state_space(geometry.mesh)
     bcs = define_bcs(TH)
 

@@ -1,13 +1,9 @@
-import os
 from argparse import ArgumentParser
 import numpy as np
-import matplotlib.pyplot as plt
 import dolfin_adjoint as da
 from scipy.special import gamma
-import dolfin as df
 from mpsadjoint import load_mesh_h5
 from synthetic_framework import inverse_crime
-
 
 
 def parse_cl_arguments():
@@ -52,7 +48,7 @@ def parse_cl_arguments():
         default=0.0,
         help="Noise level; how much noise we perturbate the synthetic data with",
     )
-    
+
     parser.add_argument(
         "--noise_level_time",
         type=float,
@@ -110,15 +106,17 @@ def parse_cl_arguments():
     )
 
 
-
 def active_tension_fun(t):
-  theta = 3
-  k = 2.5
-  ts = 0.03*t
-  baseline_value = 0.0001
-  scaling_value = 0.2
+    theta = 3
+    k = 2.5
+    ts = 0.03 * t
+    baseline_value = 0.0001
+    scaling_value = 0.2
 
-  return scaling_value*1/(gamma(k)*theta**k) * ts**(k - 1)*np.exp(-ts/theta) + baseline_value
+    return (
+        scaling_value * 1 / (gamma(k) * theta**k) * ts ** (k - 1) * np.exp(-ts / theta)
+        + baseline_value
+    )
 
 
 def synthetic_experiment():
@@ -137,24 +135,24 @@ def synthetic_experiment():
 
     mesh_file = f"meshes4/chip_bayK_clmax_{mesh_res}.h5"
     geometry = load_mesh_h5(mesh_file)
-    
+
     if fiber == "sines":
         theta = da.Expression("0.5*(sin((x[0] - x[1] + 210)/60))", degree=4)
     else:
         theta = da.Constant(0.5)
-    
+
     active_over_time = []
 
     time = np.arange(start, stop, step_length)
     tension_values = active_tension_fun(time)
-    
+
     for t in tension_values:
         if active == "sines":
             a = da.Expression("t*(1 + sin((x[0] + x[1] + 210)/60))", t=t, degree=4)
 
         else:
             a = da.Constant(t)
-        
+
         active_over_time.append(a)
 
     output_folder = (

@@ -3,11 +3,13 @@ import numpy as np
 import dolfin as df
 import dolfin_adjoint as da
 
-from mpsadjoint import (
+from mpsadjoint.cardiac_mechanics import (
     define_state_space,
     define_bcs,
     define_weak_form,
     set_fenics_parameters,
+)
+from mpsadjoint.io_files import (
     write_active_strain_to_file,
     write_fiber_angle_to_file,
     write_fiber_direction_to_file,
@@ -42,7 +44,7 @@ def generate_synthetic_data(geometry, active_strain, theta):
     set_fenics_parameters()
 
     mesh = geometry.mesh
-    mesh_finer = df.refine(mesh)
+    # mesh_finer = df.refine(mesh)
 
     TH = define_state_space(mesh)
     U = df.FunctionSpace(mesh, "CG", 1)
@@ -110,9 +112,7 @@ def inverse_crime(
     np.random.seed(int(100 * noise_level_outer))
 
     if noise_level_outer > 0:
-        underlying_distribution = generate_noise_distribution(
-            zero_dist, noise_level_outer
-        )
+        underlying_distribution = generate_noise_distribution(zero_dist, noise_level_outer)
     else:
         underlying_distribution = zero_dist
 
@@ -121,30 +121,22 @@ def inverse_crime(
 
     max_fact = 0
     for u in u_synthetic:
-        max_fact = max(
-            max_fact, df.assemble(df.inner(u, u) * df.dx(geometry.mesh)) ** 0.5
-        )
+        max_fact = max(max_fact, df.assemble(df.inner(u, u) * df.dx(geometry.mesh)) ** 0.5)
 
     for u in u_synthetic:
         u_d = da.Function(V2)
 
         data_u = u.vector()[:]
         if noise_level_inner > 0:
-            noise_distribution_time_step = generate_noise_distribution(
-                zero_dist, noise_level_inner
-            )
+            noise_distribution_time_step = generate_noise_distribution(zero_dist, noise_level_inner)
         else:
             noise_distribution_time_step = zero_dist
 
-        scaling_factor = (
-            df.assemble(df.inner(u, u) * df.dx(geometry.mesh)) ** 0.5 / max_fact
-        )
+        scaling_factor = df.assemble(df.inner(u, u) * df.dx(geometry.mesh)) ** 0.5 / max_fact
 
         noise_fun = da.Function(u.function_space())
         noise_fun.vector()[:] = (
-            data_u
-            + scaling_factor * noise_distribution_time_step
-            + underlying_distribution
+            data_u + scaling_factor * noise_distribution_time_step + underlying_distribution
         )
 
         u_d.vector()[:] = da.project(noise_fun, V2).vector()[:]
@@ -175,7 +167,7 @@ def write_original_files(output_folder, mesh, active, theta, u_data, E_data):
     V1 = df.VectorFunctionSpace(mesh, "CG", 1)
     V2 = df.VectorFunctionSpace(mesh, "CG", 2)
     T1 = df.TensorFunctionSpace(mesh, "CG", 1)
-    T2 = df.TensorFunctionSpace(mesh, "CG", 2)
+    # T2 = df.TensorFunctionSpace(mesh, "CG", 2)
 
     filename_active = f"{output_folder}/active_strain_original.xdmf"
     if not os.path.isfile(filename_active):

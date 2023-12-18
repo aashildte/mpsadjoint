@@ -2,7 +2,7 @@ from argparse import ArgumentParser
 import numpy as np
 import dolfin_adjoint as da
 from scipy.special import gamma
-from mpsadjoint import load_mesh_h5
+from mpsadjoint.mesh_setup import load_mesh_h5
 from synthetic_framework import inverse_crime
 
 

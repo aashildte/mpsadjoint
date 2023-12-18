@@ -4,14 +4,11 @@ import dolfin as df
 from argparse import ArgumentParser
 import mps  # depends on this for getting units
 
-from mpsadjoint import (
-    load_mesh_h5,
-    solve_inverse_problem,
-    mps_to_fenics,
-    set_fenics_parameters,
-    write_displacement_to_file,
-    write_strain_to_file,
-)
+from mpsadjoint.mpsmechanics import mps_to_fenics
+from mpsadjoint.mesh_setup import load_mesh_h5
+from mpsadjoint.cardiac_mechanics import set_fenics_parameters
+from mpsadjoint.inverse import solve_inverse_problem
+from mpsadjoint.io_files import write_displacement_to_file, write_strain_to_file
 
 set_fenics_parameters()
 
@@ -84,9 +81,14 @@ def parse_cl_arguments():
     mesh_res,
 ) = parse_cl_arguments()
 
-displacement_file = f"experiments/AshildData/20211126_bayK_chipB/{dose}/20211126-GCaMP80HCF20-BayK_Stream_B01_s1_TL-20_displacement_avg_beat.npy"
-# mps_file = f"experiments/AshildData/20220105_omecamtiv_chipB/{dose}/20220105-80GCaMP20HCF-omecamtiv_Stream_B01_s1_TL-20-Stream.tif"
-
+displacement_file = (
+    "experiments/AshildData/20211126_bayK_chipB/"
+    f"{dose}/20211126-GCaMP80HCF20-BayK_Stream_B01_s1_TL-20_displacement_avg_beat.npy"
+)
+mps_file = (
+    "experiments/AshildData/20220105_omecamtiv_chipB/"
+    f"{dose}/20220105-80GCaMP20HCF-omecamtiv_Stream_B01_s1_TL-20-Stream.tif"
+)
 # load data from mechanical analysis; specific for corresponding experiment
 mps_data = np.load(displacement_file)
 mps_info = mps.MPS(mps_file).info
@@ -94,17 +96,13 @@ mps_info = {"um_per_pixel": 1.3552}
 
 # then get command line arguments
 
-output_folder = (
-    f"new_results/step_{from_step}_{to_step}_{step_length}_bayK_{dose}_msh_{mesh_res}"
-)
+output_folder = f"new_results/step_{from_step}_{to_step}_{step_length}_bayK_{dose}_msh_{mesh_res}"
 
 # load mesh; specific for a given design
 mesh_file = f"meshes4/chip_bayK_clmax_{mesh_res}.h5"
 geometry = load_mesh_h5(mesh_file)
 
-u_data = mps_to_fenics(mps_data, mps_info, geometry.mesh, from_step, to_step)[
-    ::step_length
-]
+u_data = mps_to_fenics(mps_data, mps_info, geometry.mesh, from_step, to_step)[::step_length]
 
 filename_displacement = f"{output_folder}/displacement_original.xdmf"
 

@@ -1,14 +1,14 @@
 import os
 import numpy as np
 from argparse import ArgumentParser
+
 # import mps                            # depends on this for getting units
 
-from mpsadjoint import (
-    load_mesh_h5,
-    solve_inverse_problem_phase_3,
-    mps_to_fenics,
-    set_fenics_parameters,
-)
+from mpsadjoint.mpsmechanics import mps_to_fenics
+from mpsadjoint.mesh_setup import load_mesh_h5
+from mpsadjoint.cardiac_mechanics import set_fenics_parameters
+from mpsadjoint.inverse import solve_inverse_problem_phase_3
+
 
 set_fenics_parameters()
 
@@ -96,15 +96,15 @@ u_data_all = []
 doses = ["Control", "10nM", "100nM", "1000nM"]
 
 for dose in doses:
-    displacement_file = f"experiments/AshildData/20211126_bayK_chipB/{dose}/20211126-GCaMP80HCF20-BayK_Stream_B01_s1_TL-20_displacement_avg_beat.npy"
-
+    displacement_file = (
+        "experiments/AshildData/20211126_bayK_chipB/"
+        f"{dose}/20211126-GCaMP80HCF20-BayK_Stream_B01_s1_TL-20_displacement_avg_beat.npy"
+    )
     # load data from mechanical analysis; specific for corresponding experiment
     mps_data = np.load(displacement_file)
     mps_info = {"um_per_pixel": 1.3552}
 
-    u_data = mps_to_fenics(mps_data, mps_info, geometry.mesh, from_step, to_step)[
-        ::step_length
-    ]
+    u_data = mps_to_fenics(mps_data, mps_info, geometry.mesh, from_step, to_step)[::step_length]
     u_data_all.append(u_data)
 
     folder = f"new_results/step_{from_step}_{to_step}_{step_length}_bayK_{dose}_msh_{mesh_res}"

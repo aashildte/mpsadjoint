@@ -3,9 +3,7 @@ import dolfin_adjoint as da
 
 
 def read_active_strain_from_file(U, filename, num_time_steps):
-    active_strain = [
-        da.Function(U, name="Active_strain") for _ in range(num_time_steps)
-    ]
+    active_strain = [da.Function(U, name="Active_strain") for _ in range(num_time_steps)]
 
     with df.XDMFFile(filename) as fin:
         for i, active in enumerate(active_strain):

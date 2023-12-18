@@ -3,7 +3,7 @@ import dolfin as df
 import dolfin_adjoint as da
 import pytest
 
-from mpsadjoint import (
+from mpsadjoint.cardiac_mechanics import (
     define_state_space,
     define_bcs,
     define_weak_form,
@@ -63,9 +63,7 @@ def test_iterative_solver(peak_active, peak_theta):
     theta = da.Function(U)
     theta.interpolate(da.Constant(0.005))
 
-    state, solver, problem = create_forward_problem_unit_cube(
-        TH, active, theta, geometry, bcs
-    )
+    state, solver, problem = create_forward_problem_unit_cube(TH, active, theta, geometry, bcs)
 
     original_state_values = state.vector()[:]
 

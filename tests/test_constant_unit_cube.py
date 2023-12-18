@@ -2,12 +2,14 @@ import math
 import dolfin as df
 import dolfin_adjoint as da
 
-from mpsadjoint import (
+from mpsadjoint.cardiac_mechanics import (
     set_fenics_parameters,
     define_state_space,
     define_bcs,
     define_weak_form,
     solve_forward_problem,
+)
+from mpsadjoint.inverse import (
     solve_inverse_problem,
 )
 
@@ -63,9 +65,7 @@ def test_constant_high():
         da.Constant(1) * df.dx(geometry.mesh)
     )
 
-    assert math.isclose(
-        active_avg, active, abs_tol=0.1
-    ), "Error: Could not solve constant problem"
+    assert math.isclose(active_avg, active, abs_tol=0.1), "Error: Could not solve constant problem"
 
 
 def test_constant():

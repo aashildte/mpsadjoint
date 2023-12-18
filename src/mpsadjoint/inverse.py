@@ -13,11 +13,13 @@ import numpy as np
 import dolfin as df
 import dolfin_adjoint as da
 
-from mpsadjoint import (
+from .cardiac_mechanics import (
     define_state_space,
     define_bcs,
     define_weak_form,
     solve_forward_problem_iteratively,
+)
+from .io_files import (
     read_active_strain_from_file,
     read_fiber_angle_from_file,
     read_states_from_file,
@@ -88,9 +90,7 @@ def cost_function(geometry, u_model, u_data):
         if u_d_int > 0:
             cost_fun += surface_int(u_m - u_d) / u_d_int
         else:
-            print(
-                "Warning: Displacement value found to be zero; omitted from cost function."
-            )
+            print("Warning: Displacement value found to be zero; omitted from cost function.")
 
     print("Cost function displacement difference: ", float(cost_fun), flush=True)
 
@@ -256,9 +256,7 @@ def define_optimization_problem(states, u_data, geometry, control_variables):
         mesh=geometry.mesh,
     )
 
-    reduced_functional = RobustReducedFunctional(
-        cost_fun, control_params, eval_cb_post=eval_cb
-    )
+    reduced_functional = RobustReducedFunctional(cost_fun, control_params, eval_cb_post=eval_cb)
 
     # one bound for every active tension field + one bound for the fiber dir. angle
     bounds = [(0, 0.3)] * (len(control_variables) - 1) + [(-np.pi / 2, np.pi / 2)]
@@ -436,9 +434,7 @@ def data_exist(output_folder):
 
 
 def load_data(output_folder, U, TH, num_time_steps):
-    active = read_active_strain_from_file(
-        U, output_folder + "/active_strain.xdmf", num_time_steps
-    )
+    active = read_active_strain_from_file(U, output_folder + "/active_strain.xdmf", num_time_steps)
     theta = read_fiber_angle_from_file(U, output_folder + "/theta.xdmf")
     states = read_states_from_file(
         TH,
@@ -589,9 +585,7 @@ def solve_inverse_problem(
     if output_folder is None:
         output_folder_iters = None
     else:
-        output_folder_iters = (
-            output_folder + f"/iterative_{number_of_iterations_iterative}"
-        )
+        output_folder_iters = output_folder + f"/iterative_{number_of_iterations_iterative}"
 
         data_path = (
             output_folder
@@ -671,8 +665,7 @@ def solve_inverse_problem_phase_3(
 
     for folder, u_d in zip(folders, u_data):
         data_path = (
-            folder
-            + f"/combined_{number_of_iterations_iterative}_{number_of_iterations_combined}"
+            folder + f"/combined_{number_of_iterations_iterative}_{number_of_iterations_combined}"
         )
 
         assert data_exist(data_path), f"Error: Data in folder {data_path} do not exist."

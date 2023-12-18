@@ -1,7 +1,7 @@
 import dolfin as df
 import dolfin_adjoint as da
 
-from mpsadjoint import (
+from mpsadjoint.cardiac_mechanics import (
     define_state_space,
     define_weak_form,
     define_bcs,

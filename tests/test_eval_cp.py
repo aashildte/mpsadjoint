@@ -2,7 +2,7 @@ import numpy as np
 import dolfin as df
 import dolfin_adjoint as da
 
-from mpsadjoint import (
+from mpsadjoint.cardiac_mechanics import (
     set_fenics_parameters,
     define_state_space,
     define_bcs,

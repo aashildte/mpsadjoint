@@ -48,20 +48,21 @@ def cost_function(geometry, u_model, u_data):
     r"""
 
     Computes the difference between u_model and u_data as a surface integral.
-
     Mathematically, we're calculating
-    ..math::
+
+    .. math::
         \sum_{t} \int_\Gamma (u_d (t) - u_m(t), u_d(t) - u_m(t)) dS
-    where u_d and u_m are displacement vectors at given time points, amd \Gamma
+
+    where u_d and u_m are displacement vectors at given time points, amd :math:`\Gamma`
     is a given surface.
 
     Args:
-        geometry - nametuple for the geometry object; for access to mesh
-        u_model (da.Function) - displacement vector function
-        u_data (da.Function) - displacement vector function
+        geometry: nametuple for the geometry object; for access to mesh
+        u_model (da.Function): displacement vector function
+        u_data (da.Function): displacement vector function
 
     Returns:
-        cost function (float) - total surface integral in x and y components
+        cost function (float): total surface integral in x and y components
 
     """
 
@@ -104,10 +105,10 @@ def eval_cb_checkpoint(cost_cur, control_params, tracked_quantities, mesh):
     by the inverse solver.
 
     Args:
-        cost_cur - built-in argument; cost function value
-        control_params - built-in argument; states of each control parameter
-        tracked_quantities - user-provided; list of values to keep track of
-        mesh - mesh used for the FEM simulations
+        cost_cur: built-in argument; cost function value
+        control_params: built-in argument; states of each control parameter
+        tracked_quantities: user-provided; list of values to keep track of
+        mesh: mesh used for the FEM simulations
 
     """
 
@@ -137,16 +138,16 @@ def initiate_controls(geometry, init_active_strain, init_theta):
     Initiates variables for active strain + theta, given initial guesses.
 
     Args:
-        geometry - Geometry object
-        init_active_strain - initial values (can be constants)
+        geometry: Geometry object
+        init_active_strain: initial values (can be constants)
             for active strain values
-        init_theta - initial values (can be constant) for the
+        init_theta: initial values (can be constant) for the
             fiber direction angle
 
     Returns:
-        active_strain - list representing the active strain,
+        active_strain: list representing the active strain,
             for each time step
-        theta - control representing the fiber angle,
+        theta: control representing the fiber angle,
             constant for all time steps
 
     """
@@ -172,15 +173,15 @@ def define_forward_problems(geometry, active_strain, theta, init_states=None):
     based on previous states when applicable.
 
     Args:
-        geometry - Geometry object; mesh + surfaces
-        active_strain - list of active strain functions
-        theta - fiber direction angle function
-        init_states - start from here; initial guesses. Not used if not set.
+        geometry: Geometry object; mesh + surfaces
+        active_strain: list of active strain functions
+        theta: fiber direction angle function
+        init_states: start from here; initial guesses. Not used if not set.
 
     Returns:
         newtonsolver used to solve the forward problems
-        forward_problems - corresponding nonlinear problems, for all time steps
-        states - state for all time steps
+        forward_problems: corresponding nonlinear problems, for all time steps
+        states: state for all time steps
 
     """
 
@@ -221,20 +222,20 @@ def define_forward_problems(geometry, active_strain, theta, init_states=None):
 
 def define_optimization_problem(states, u_data, geometry, control_variables):
     """
-
     Defines key variables for the optimization problem, as well as the
     problem itself.
 
     Args:
-        states - list of da.Function objects, all states over time
-        u_data - list of da.Function objects, data displacement over time
-        geometry - Geometry object (mesh + surfaces)
-        control variables - list of da.Function objects, to be optimized
+        states: list of da.Function objects, all states over time
+        u_data: list of da.Function objects, data displacement over time
+        geometry: Geometry object (mesh + surfaces)
+        control variables: list of da.Function objects, to be optimized
 
     Returns:
-        optimization (minimization) problem
-        tracked_values - lists of cost function and average values,
-            to be updated after every acceptable successful iteration
+        tuple:
+            optimization (minimization) problem and tracked_values which
+            is a lists of cost function and average values, to be
+            updated after every acceptable successful iteration
 
     """
     u_model = [state.split()[0] for state in states]
@@ -272,8 +273,8 @@ def solve_optimization_problem(problem, maximum_iterations):
     Runs the main optimization script.
 
     Args:
-        problem - minimization problem to solve
-        maximum_iterations - number of iterations to
+        problem: minimization problem to solve
+        maximum_iterations: number of iterations to
             run the optimization algorithmn for
 
     Returns:
@@ -298,10 +299,8 @@ def solve_optimization_problem(problem, maximum_iterations):
 
 def write_inversion_results(mesh, active, theta, states, output_folder):
     """
-
     Saves results in a spatial-temporal manner by saving all
     as dolfin functions (xdmf files).
-
     """
 
     U = df.FunctionSpace(mesh, "CG", 1)
@@ -340,9 +339,7 @@ def write_inversion_results(mesh, active, theta, states, output_folder):
 
 def write_inversion_statistics(tracked_quantities, output_folder):
     """
-
     Saves cost function values + average control values to file.
-
     """
 
     cost_function_values = np.array(tracked_quantities[0])
@@ -356,12 +353,11 @@ def write_inversion_statistics(tracked_quantities, output_folder):
 
 def sort_data_after_displacement(u_data):
     """
-
     Sort the data, i.e. actually the time steps used to access the data, after
     displacement norm
 
     Args:
-        u_data - list of displacement data
+        u_data: list of displacement data
 
     Returns:
         heap with displacement norms as value, time_steps as values
@@ -566,18 +562,18 @@ def solve_inverse_problem(
     Main function; we'll run everything from here.
 
     Args:
-        geometry - namedtuple Geometry with mesh and surface information
-        u_data - list of displacement data for all time points
-        output_folder - results will be saved here (if provided)
-        number_of_iterations_iterative - integer, number of iterations to use
+        geometry: namedtuple Geometry with mesh and surface information
+        u_data: list of displacement data for all time points
+        output_folder: results will be saved here (if provided)
+        number_of_iterations_iterative: integer, number of iterations to use
             for optimizing each time step in an iterative manner (step by step)
-        number_of_iterations_combined - integer; number of iterations to use
+        number_of_iterations_combined: integer; number of iterations to use
             for optimizing all time steps combined into one optimization problem
 
     Returns:
-        active_strain - list of da.Function objects, contains optimized values
+        active_strain: list of da.Function objects, contains optimized values
             for active strain, for each time step
-        theta - da.function object, contains optimized values for the fiber
+        theta: da.function object, contains optimized values for the fiber
             direction (as an angle), for all time steps altogether
 
     """

@@ -180,14 +180,14 @@ def get_pacing_intervals(data):
 def process_displacement(path, reference_time_step):
     data = mps.MPS(path)
     file_id = path.split(".")[0]
-    intervals = get_pacing_intervals(data)
+    # intervals = get_pacing_intervals(data)
 
     um_per_pixel = data.info["um_per_pixel"]
 
     dt = data.info["dt"]
     ref = data.frames[:, :, reference_time_step - 5 : reference_time_step].mean(2)
 
-    ref_shape = ref.shape[0] * ref.shape[1]
+    # ref_shape = ref.shape[0] * ref.shape[1]
     # print(np.linalg.norm(ref)/ref_shape)
 
     u = um_per_pixel * get_displacements(data.frames[:, :, :], reference_image=ref)
@@ -226,17 +226,9 @@ def process_displacement(path, reference_time_step):
 
 
 if __name__ == "__main__":
-    # process_displacement("experiments/AshildData/20211126_bayK_chipB/Control/20211126-GCaMP80HCF20-BayK_Stream_B01_s1_TL-20.tif", 169)
     process_displacement(
         "experiments/AshildData/20211126_bayK_chipB/10nM/20211126-GCaMP80HCF20-BayK_Stream_B01_s1_TL-20.tif",
         124,
     )
-    # process_displacement("experiments/AshildData/20211126_bayK_chipB/100nM/20211126-GCaMP80HCF20-BayK_Stream_B01_s1_TL-20.tif", 141)
-    # process_displacement("experiments/AshildData/20211126_bayK_chipB/1000nM/20211126-GCaMP80HCF20-BayK_Stream_B01_s1_TL-20.tif", 154)
-    # process_displacement("experiments/AshildData/20220105_omecamtiv_chipB/control/20220105-80GCaMP20HCF-omecamtiv_Stream_B01_s1_TL-20-Stream.tif", 60)
-    # process_displacement("experiments/AshildData/20220105_omecamtiv_chipB/1 nM/20220105-80GCaMP20HCF-omecamtiv_Stream_B01_s1_TL-20-Stream.tif", 241)
-    # process_displacement("experiments/AshildData/20220105_omecamtiv_chipB/10 nM/20220105-80GCaMP20HCF-omecamtiv_Stream_B01_s1_TL-20-Stream.tif", 196)
-    # process_displacement("experiments/AshildData/20220105_omecamtiv_chipB/100nM/20220105-80GCaMP20HCF-omecamtiv_Stream_B01_s1_TL-20-Stream.tif", 249)
-    # process_displacement("experiments/AshildData/20220105_omecamtiv_chipB/1000nM/20220105-80GCaMP20HCF-omecamtiv_Stream_B01_s1_TL-20-Stream.tif", 152)
 
     plt.show()

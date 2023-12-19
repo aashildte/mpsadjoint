@@ -305,7 +305,7 @@ def write_inversion_results(mesh, active, theta, states, output_folder):
 
     U = df.FunctionSpace(mesh, "CG", 1)
     V1 = df.VectorFunctionSpace(mesh, "CG", 1)
-    V2 = df.VectorFunctionSpace(mesh, "CG", 1)
+    # V2 = df.VectorFunctionSpace(mesh, "CG", 1)
     T1 = df.TensorFunctionSpace(mesh, "CG", 1)
     T2 = df.TensorFunctionSpace(mesh, "CG", 2)
 
@@ -473,13 +473,15 @@ def solve_iteratively(
 
         if output_folder is not None and data_exist(output_folder_t):
             print(
-                f"Loading inversion results for time step {time_step}; iteration {iteration_num} / {len(u_data)}",
+                f"Loading inversion results for time step {time_step}; "
+                f"iteration {iteration_num} / {len(u_data)}",
                 flush=True,
             )
             active_strain, theta, states = load_data(output_folder_t, U, TH, 1)
         else:
             print(
-                f"Starting inversion for time step {time_step}; iteration {iteration_num} / {len(u_data)}",
+                f"Starting inversion for time step {time_step}; "
+                f"iteration {iteration_num} / {len(u_data)}",
                 flush=True,
             )
             (
@@ -707,7 +709,9 @@ def solve_inverse_problem_phase_3(
             )
 
             print("Solving for time step ", t, flush=True)
-            newtonsolver, forward_problems, state2 = define_forward_problems(geometry, active_init, theta_t)
+            newtonsolver, forward_problems, state2 = define_forward_problems(
+                geometry, active_init, theta_t
+            )
             """
             solve_forward_problem_iteratively(
                 active,
@@ -738,20 +742,19 @@ def solve_inverse_problem_phase_3(
     for i, output_folder in enumerate(folders):
         active_strain_per_dose = active_all[i * T : (i + 1) * T]
         states_per_dose = states[i * T : (i + 1) * T]
+        name = (
+            f"/combined_phase3_{number_of_iterations_iterative}_"
+            f"{number_of_iterations_combined}_{number_of_iterations}"
+        )
 
         write_inversion_results(
             geometry.mesh,
             active_strain_per_dose,
             theta,
             states_per_dose,
-            output_folder
-            + f"/combined_phase3_{number_of_iterations_iterative}_{number_of_iterations_combined}_{number_of_iterations}",
+            output_folder + name,
         )
 
-        write_inversion_statistics(
-            tracked_quantities,
-            output_folder
-            + f"/combined_phase3_{number_of_iterations_iterative}_{number_of_iterations_combined}_{number_of_iterations}",
-        )
+        write_inversion_statistics(tracked_quantities, output_folder + name)
 
     return active_all, theta, states_all

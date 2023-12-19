@@ -225,7 +225,7 @@ def remove_rigid_motion_term(mesh, u, r, state, test_state):
 
     """
 
-    position = df.SpatialCoordinate(mesh)
+    # position = df.SpatialCoordinate(mesh)
 
     RM = [
         da.Constant((1, 0)),

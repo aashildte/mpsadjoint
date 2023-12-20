@@ -135,7 +135,6 @@ def PK_stress_tensor(F, p, active_function, mat_params_tissue, theta):
     Jm1 = pow(J, -1.0)
 
     I1 = Jm1 * df.tr(C)
-
     f0 = fiber_direction(theta)
     I4f = Jm1 * df.inner(C * f0, f0)
 
@@ -145,22 +144,6 @@ def PK_stress_tensor(F, p, active_function, mat_params_tissue, theta):
 
     psi = psi_holzapfel(I1e, I4fe, **mat_params_tissue)
     PK1 = df.diff(psi, F) + p * Jm1 * J * df.inv(F.T)
-
-    """
-
-    C = F.T * F
-    J = df.det(F)
-    Jm23 = pow(J, -float(2) / 3)
-    I1 = Jm23*df.tr(C)
-    I4f = Jm23*df.inner(C * f0, f0)
-
-    psi_active = active_function / 2.0 * (I4f - 1)
-    psi_passive = psi_holzapfel(I1, I4f, **mat_params_tissue)
-    psi_comp = p*(J - 1)
-
-    psi = psi_active + psi_passive + psi_comp
-    PK1 = df.diff(psi, F)
-    """
 
     return PK1
 
@@ -201,7 +184,8 @@ def define_bcs(TH):
     """
     V, _ = TH.split()
 
-    # This is a hack, since dolfin adjoint doesn't allow no bcs
+    # This is sort of a hack; dolfin adjoint doesn't allow no bcs
+    # so we are adding an empty set of bcs
     xmin_bnd = "0"
     bcs = [da.DirichletBC(V, da.Constant(np.zeros(2)), xmin_bnd)]
 

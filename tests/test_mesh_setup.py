@@ -1,6 +1,5 @@
 import dolfin
 from pathlib import Path
-import numpy as np
 import pytest
 from mpsadjoint import mesh_setup
 
@@ -23,7 +22,7 @@ def test_load_mesh_h5():
     assert (geometry.mesh.coordinates() == mesh.coordinates()).all()
 
     ds = geometry.ds
-    assert dolfin.assemble(dolfin.Constant(1)*ds(1)) > 0.0
+    assert dolfin.assemble(dolfin.Constant(1) * ds(1)) > 0.0
 
     filename.unlink()
 

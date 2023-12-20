@@ -5,14 +5,15 @@ import matplotlib.pyplot as plt
 import dolfin as df
 import dolfin_adjoint as da
 
-from mpsadjoint import (
-    def_state_space,
-    def_bcs,
-    def_weak_form,
+from .cardiac_mechanics import (
+    define_state_space,
+    define_bcs,
+    define_weak_form,
     solve_forward_problem_iteratively,
 )
 
-from mpsadjoint.nonlinearproblem import NonlinearProblem
+from .nonlinearproblem import NonlinearProblem
+
 
 class RobustReducedFunctional(da.ReducedFunctional):
     def __call__(self, *args, **kwargs):
@@ -23,6 +24,7 @@ class RobustReducedFunctional(da.ReducedFunctional):
             value = np.nan
 
         return value
+
 
 def cost_diff(mesh, facets, u_model, u_data):
     cost_fun = 0
@@ -35,7 +37,7 @@ def cost_diff(mesh, facets, u_model, u_data):
     surf_int = lambda f: da.assemble(df.inner(f, f) * ds(1)) / area
 
     # minimize difference between tracked data and simulated data displacement
-    for (u_m, u_d) in zip(u_model, u_data):
+    for u_m, u_d in zip(u_model, u_data):
         cost_fun += surf_int(df.inner(u_m, e1) - df.inner(u_d, e1))  # x component
         cost_fun += surf_int(df.inner(u_m, e2) - df.inner(u_d, e2))  # y component
 
@@ -78,13 +80,10 @@ def cost_function(
 
 
 def initiate_controls_continuous(U, init_active, init_theta):
-
     num_time_steps = len(init_active)
-    active_strain = [
-        da.Function(U, name="Active stress") for _ in range(num_time_steps)
-    ]
+    active_strain = [da.Function(U, name="Active stress") for _ in range(num_time_steps)]
 
-    for (a, i) in zip(active_strain, init_active):
+    for a, i in zip(active_strain, init_active):
         a.assign(df.project(i, U))
 
     theta = da.Function(U, name="Theta")
@@ -153,7 +152,6 @@ def define_control_variables(init_active, init_theta, constant_controls, U):
 
 
 def define_forward_problems(active_strain, theta, init_states, TH, bcs):
-    
     # TODO consider moving this to cardiac_mechanics
 
     newtonsolver = da.NewtonSolver()
@@ -166,7 +164,7 @@ def define_forward_problems(active_strain, theta, init_states, TH, bcs):
     num_time_steps = len(active_strain)
 
     for t in range(num_time_steps):
-        R, state = def_weak_form(
+        R, state = define_weak_form(
             TH,
             active_strain[t],
             theta,
@@ -186,7 +184,6 @@ def define_forward_problems(active_strain, theta, init_states, TH, bcs):
 
 
 def define_reduced_functional(u_model, u_data, mesh, ceiling, control_variables):
-
     cost_fun = cost_function(
         u_model,
         u_data,
@@ -203,16 +200,12 @@ def define_reduced_functional(u_model, u_data, mesh, ceiling, control_variables)
         tracked_values=cost_over_iters,
     )
 
-    reduced_functional = RobustReducedFunctional(
-        cost_fun, control_params, eval_cb_post=eval_cb
-    )
+    reduced_functional = RobustReducedFunctional(cost_fun, control_params, eval_cb_post=eval_cb)
 
     return reduced_functional, cost_over_iters
 
 
-def run_inverse_solver(
-    problem, control_params, iterations, newtonsolver, forward_problems, states
-):
+def run_inverse_solver(problem, control_params, iterations, newtonsolver, forward_problems, states):
     parameters = {
         "limited_memory_initialization": "scalar2",
         "maximum_iterations": iterations,
@@ -233,6 +226,7 @@ def run_inverse_solver(
 
     return optimal_values
 
+
 def solve_inverse_problem_inner(
     mesh,
     ceiling,
@@ -246,14 +240,13 @@ def solve_inverse_problem_inner(
     constant_controls,
     iters_inner,
 ):
-    
     control_variables, active_strain, theta = define_control_variables(
         init_active, init_theta, constant_controls, U
     )
     newtonsolver, forward_problems, states, u_model = define_forward_problems(
         active_strain, theta, init_states, TH, bcs
     )
-    
+
     reduced_functional, cost_over_iters = define_reduced_functional(
         u_data, u_model, mesh, ceiling, control_variables
     )
@@ -268,9 +261,12 @@ def solve_inverse_problem_inner(
     *optimal_active_strain, optimal_theta = optimal_values
 
     for active_scaled, state, optimal_active, init_state, problem in zip(
-            active_strain_scaled, states, optimal_active_strain, init_states, forward_problems
+        active_strain_scaled,
+        states,
+        optimal_active_strain,
+        init_states,
+        forward_problems,
     ):
-        
         solve_forward_problem_iteratively(
             active_scaled,
             theta_scaled,
@@ -290,7 +286,6 @@ def solve_inverse_problem_inner(
 
 
 def write_results(U, V, u_data, active, theta, states, cost_over_outer, output_folder):
-
     disp_org = df.XDMFFile(f"{output_folder}/disp_org.xdmf")
     disp_est = df.XDMFFile(f"{output_folder}/disp_est.xdmf")
     active_est = df.XDMFFile(f"{output_folder}/active_strain.xdmf")
@@ -351,7 +346,7 @@ def solve_inverse_problem(
     iteration_pattern,
     constant_controls=False,
 ):
-    TH = def_state_space(mesh)
+    TH = define_state_space(mesh)
     U = df.FunctionSpace(mesh, "CG", 1)
 
     if constant_controls:
@@ -359,7 +354,7 @@ def solve_inverse_problem(
         theta = da.Constant(0.0)
     else:
         active_strain = [da.Function(U) for _ in range(len(u_data))]
-        
+
         for active in active_strain:
             active.assign(da.Constant(0.0))
 
@@ -371,7 +366,7 @@ def solve_inverse_problem(
     cost_over_outer = []
 
     V = df.VectorFunctionSpace(mesh, "CG", 2)
-    bcs = def_bcs(dc_facets, TH)
+    bcs = define_bcs(dc_facets, TH)
     o = 0
 
     for iters_inner in iteration_pattern:
@@ -379,7 +374,12 @@ def solve_inverse_problem(
         print(f"Starting new inverse problem: {o} / {len(iteration_pattern)}.")
 
         # now we have a solution; try finding it solving an inverse problem
-        (active_strain, theta, states, cost_over_inner,) = solve_inverse_problem_inner(
+        (
+            active_strain,
+            theta,
+            states,
+            cost_over_inner,
+        ) = solve_inverse_problem_inner(
             mesh,
             ceiling,
             u_data,

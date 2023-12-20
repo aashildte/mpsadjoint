@@ -1,16 +1,15 @@
 import math
-from pathlib import Path
-import numpy as np
 import dolfin as df
 import dolfin_adjoint as da
 
-from mpsadjoint import (
+from mpsadjoint.cardiac_mechanics import (
     set_fenics_parameters,
-    load_mesh_h5,
     define_state_space,
     define_bcs,
     define_weak_form,
     solve_forward_problem,
+)
+from mpsadjoint.inverse import (
     solve_inverse_problem,
 )
 
@@ -20,17 +19,16 @@ set_fenics_parameters()
 
 
 def setup_mesh_funspaces():
-    
     mesh = da.UnitSquareMesh(1, 1)
 
-    pillar_bcs= df.MeshFunction("size_t", mesh, 1, 0)
+    pillar_bcs = df.MeshFunction("size_t", mesh, 1, 0)
     pillar_bcs.array()[:] = 0
     pillar_bcs.array()[0] = 1
-    
-    ds = df.Measure('ds', domain=mesh, subdomain_data=pillar_bcs)
+
+    ds = df.Measure("ds", domain=mesh, subdomain_data=pillar_bcs)
 
     geometry = Geometry(mesh, ds)
-    
+
     TH = define_state_space(geometry.mesh)
     bcs = define_bcs(TH)
 
@@ -43,9 +41,9 @@ def test_constant_high():
 
     active = da.Constant(0.03)
     theta = da.Constant(0.0)
-    
+
     # generate synthetic data
-    
+
     R, state = define_weak_form(TH, active, theta, geometry.ds)
     solve_forward_problem(R, state, bcs)
 
@@ -67,18 +65,15 @@ def test_constant_high():
         da.Constant(1) * df.dx(geometry.mesh)
     )
 
-    assert math.isclose(
-        active_avg, active, abs_tol=0.1
-    ), "Error: Could not solve constant problem"
+    assert math.isclose(active_avg, active, abs_tol=0.1), "Error: Could not solve constant problem"
 
 
 def test_constant():
-
     TH, bcs, geometry = setup_mesh_funspaces()
 
     active = da.Constant(0.01)
     theta = da.Constant(0.0)
-    
+
     # generate synthetic data
 
     R, state = define_weak_form(TH, active, theta, geometry.ds)

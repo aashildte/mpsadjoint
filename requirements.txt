@@ -1,8 +1,0 @@
-pygmsh==6.0.2
-meshio
-lxml
-numpy
-scipy
-mpi4py
-opencv-python
-dask

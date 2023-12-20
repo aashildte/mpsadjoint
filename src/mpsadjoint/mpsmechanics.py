@@ -10,8 +10,6 @@ import dolfin as df
 import dolfin_adjoint as da
 
 from scipy.interpolate import RegularGridInterpolator
-from scipy import ndimage as nd
-from scipy.signal import savgol_filter
 
 
 def mps_to_fenics(mps_data, mps_info, mesh, time_start, time_stop):
@@ -19,7 +17,7 @@ def mps_to_fenics(mps_data, mps_info, mesh, time_start, time_stop):
 
     v_d = V2.dofmap().dofs()
     mesh_coords = V2.tabulate_dof_coordinates()[::2]
-    
+
     u_data = []
 
     xcoords, ycoords = define_value_ranges(mps_data, mps_info)
@@ -45,7 +43,6 @@ def mps_to_fenics(mps_data, mps_info, mesh, time_start, time_stop):
 
 
 def define_value_ranges(mps_data, mps_info):
-
     um_per_pixel = mps_info["um_per_pixel"]
 
     _, X, Y, _ = mps_data.shape

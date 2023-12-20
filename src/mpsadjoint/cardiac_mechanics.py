@@ -4,9 +4,9 @@
 
 """
 
+import numpy as np
 import dolfin as df
 import dolfin_adjoint as da
-import numpy as np
 
 
 def set_fenics_parameters():
@@ -102,12 +102,7 @@ def fiber_direction(theta):
 
     """
 
-    R = df.as_matrix(
-        (
-            (df.cos(theta), -df.sin(theta)),
-            (df.sin(theta), df.cos(theta)),
-        )
-    )
+    R = df.as_matrix(((df.cos(theta), -df.sin(theta)), (df.sin(theta), df.cos(theta))))
 
     return R * df.as_vector([1.0, 0.0])
 
@@ -139,8 +134,8 @@ def PK_stress_tensor(F, p, active_function, mat_params_tissue, theta):
     I4f = Jm1 * df.inner(C * f0, f0)
 
     mgamma = 1 - active_function
-    I1e = mgamma * I1 + (1 / mgamma**2 - mgamma) * I4f
-    I4fe = 1 / mgamma**2 * I4f
+    I1e = mgamma * I1 + (1 / mgamma ** 2 - mgamma) * I4f
+    I4fe = 1 / mgamma ** 2 * I4f
 
     psi = psi_holzapfel(I1e, I4fe, **mat_params_tissue)
     PK1 = df.diff(psi, F) + p * Jm1 * J * df.inv(F.T)
@@ -222,13 +217,7 @@ def remove_rigid_motion_term(mesh, u, r, state, test_state):
     return df.derivative(Pi, state, test_state)
 
 
-def define_weak_form(
-    TH,
-    active_function,
-    theta,
-    ds,
-    mat_params_tissue={},
-):
+def define_weak_form(TH, active_function, theta, ds, mat_params_tissue={}):
     """
 
     Defines trial and test functions + weak form.
@@ -269,23 +258,34 @@ def define_weak_form(
 
 
 def solve_forward_problem(R, state, bcs):
+    """
+
+    Solves the forward mechanical problem.
+
+    """
     da.solve(
         R == 0,
         state,
         bcs,
-        solver_parameters={
-            "newton_solver": {
-                "maximum_iterations": 20,
-            }
-        },
+        solver_parameters={"newton_solver": {"maximum_iterations": 20}},
     )
 
 
 def get_control_values(control):
+    """
+
+    Subtracts all function values as a vector.
+
+    """
     return control.vector()[:]
 
 
 def assign_new_values(control_function, new_values):
+    """
+
+    Assigns values to function from a vector.
+
+    """
     control_function.vector()[:] = new_values
 
 

@@ -28,6 +28,9 @@ jobs:
           restore-keys: |
             cache_v1
 
+      - name: Install IPOPT
+        run: apt-get update && apt-get install -y coinor-libipopt-dev
+
       - name: Install package
         run: python3 -m pip install -e .[test]
 

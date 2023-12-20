@@ -28,6 +28,7 @@ dependencies = [
     "mpi4py",
     "opencv-python<=4.7.0.72",
     "dask",
+    "cyipopt",
     "dolfin-adjoint",
     "cardiac-mps",
 ]

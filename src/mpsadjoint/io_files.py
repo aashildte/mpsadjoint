@@ -102,10 +102,10 @@ def write_strain_to_file(T, strain_values, filename):
 
 
 def read_displacement_from_file(V, filename, num_time_steps):
-    u = [df.Function(V, name="Displacement (µm)") for _ in range(num_time_step)]
+    u = [df.Function(V, name="Displacement (µm)") for _ in range(num_time_steps)]
 
     with df.XDMFFile(filename) as fin:
         for t in range(num_time_steps):
-            fout.read_checkpoint(u[t], "Displacement (µm)", t)
+            fin.read_checkpoint(u[t], "Displacement (µm)", t)
 
     return u

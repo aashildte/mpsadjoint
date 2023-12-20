@@ -202,7 +202,6 @@ def process_displacement(path, reference_time_step):
         num_beats += 1
 
     avg_beat = np.mean(np.array(all_beats), axis=0)
-    avg_beat = average_data_in_time(avg_beat)
 
     c1 = np.linalg.norm(avg_beat, axis=3)  # norm over (x,y)-koordinat -> X x Y x T-shape
     c2 = np.mean(c1, axis=(0, 1))  # average over (X,Y) -> T-shape

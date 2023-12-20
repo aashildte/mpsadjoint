@@ -10,6 +10,7 @@ from functools import partial
 import os
 import heapq
 import numpy as np
+import typing
 import dolfin as df
 import dolfin_adjoint as da
 
@@ -35,6 +36,14 @@ from .io_files import (
 
 
 class RobustReducedFunctional(da.ReducedFunctional):
+    """
+
+    This class overwrites the call function in da.ReducedFunctional by allowing for
+    the code to resume if a converged solution has not been found. This step is
+    allows the optimization process try out non-converging solutions while maintaining
+    the tape used to track previous simulations.
+
+    """
     def __call__(self, *args, **kwargs):
         try:
             value = super().__call__(*args, **kwargs)
@@ -45,29 +54,27 @@ class RobustReducedFunctional(da.ReducedFunctional):
         return value
 
 
-def cost_function(geometry, u_model, u_data):
+def cost_function(u_model : list(da.Function), u_data : list(da.Function)) -> float:
     r"""
 
     Computes the difference between u_model and u_data as a surface integral.
     Mathematically, we're calculating
 
     .. math::
-        \sum_{t} \int_\Gamma (u_d (t) - u_m(t), u_d(t) - u_m(t)) dS
+        \sum_{t} \int (u_d (t) - u_m(t), u_d(t) - u_m(t)) dS
 
-    where u_d and u_m are displacement vectors at given time points, amd :math:`\Gamma`
-    is a given surface.
+    where u_d and u_m are displacement vectors at given time points.
 
     Args:
-        geometry: nametuple for the geometry object; for access to mesh
         u_model (da.Function): displacement vector function
         u_data (da.Function): displacement vector function
 
     Returns:
-        cost function (float): total surface integral in x and y components
+        cost function value (float): total surface integral in x and y components
 
     """
 
-    surface_int = lambda f: da.assemble(df.inner(f, f) * df.dx(geometry.mesh))
+    surface_int = lambda f: da.assemble(df.inner(f, f) * df.dx)
 
     cost_fun = 0
 
@@ -129,7 +136,6 @@ def eval_cb_checkpoint(cost_cur, control_params, tracked_quantities, mesh):
         active_tracked.append(active_str_t)
 
     theta_avg = da.assemble(theta * df.dx(mesh)) / volume
-    print("theta: ", theta_avg)
     tracked_quantities[0].append(cost_cur)
     tracked_quantities[1].append(active_tracked)
     tracked_quantities[2].append(theta_avg)
@@ -235,7 +241,7 @@ def define_optimization_problem(states, u_data, geometry, control_variables):
     """
     u_model = [state.split()[0] for state in states]
 
-    cost_fun = cost_function(geometry, u_model, u_data)
+    cost_fun = cost_function(u_model, u_data)
 
     control_params = [da.Control(x) for x in control_variables]
 
@@ -355,7 +361,7 @@ def write_inversion_statistics(tracked_quantities, output_folder):
     np.save(f"{output_folder}/theta.npy", theta)
 
 
-def sort_data_after_displacement(u_data):
+def sort_data_after_displacement(u_data : list(da.Function)) -> list(da.Function):
     """
     Sort the data, i.e. actually the time steps used to access the data, after
     displacement norm
@@ -407,7 +413,22 @@ def solve_pdeconstrained_optimization_problem(
     return active_strain, theta, states, tracked_quantities
 
 
-def data_exist(output_folder):
+def data_exist(output_folder : dir) -> bool:
+    """
+
+    Checks whether we already have calculated optimized values; this
+    is a part of the checkpointing process. If all of active strain,
+    theta, and displacement exists on disk, this function will return
+    True.
+
+    Args:
+        output_folder: folder in which the output values might exist
+
+    Returns:
+        bool: True if all three files exist
+
+    """
+
     active = os.path.isfile(output_folder + "/active_strain.xdmf")
     theta = os.path.isfile(output_folder + "/theta.xdmf")
     states = os.path.isfile(output_folder + "/displacement.xdmf")

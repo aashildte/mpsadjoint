@@ -21,17 +21,17 @@ The code in this repository is pure python and can therefore be installed with `
 ```
 python -m pip install git+https://github.com/aashildte/mpsadjoint
 ```
-However, to run the code you need to have FEniCS. See https://fenicsproject.org/download/archive/ for more info about how to install FEniCS.
+However, to run the code you need to have FEniCS and Pyadjoint/Dolfin adjoint. See https://fenicsproject.org/download/archive/ and https://www.dolfin-adjoint.org/en/latest/download/index.html for more info about how to install these (or follow the conda instructions below).
 
 ### Using conda
 
-In order to run the code with Conda, install pyadjont as (following the description [here](https://anaconda.org/conda-forge/dolfin-adjoint));
+In order to run the code with Conda, install Pyadjont as (following the description [here](https://anaconda.org/conda-forge/dolfin-adjoint));
 
 ```
 conda install -c conda-forge dolfin-adjoint
 ```
 
-then cyipopt (as described [here](https://cyipopt.readthedocs.io/en/stable/install.html#using-conda)) as:
+then the optimization software Cyipopt (as described [here](https://cyipopt.readthedocs.io/en/stable/install.html#using-conda)) as:
 
 ```
 conda install -c conda-forge cyipopt

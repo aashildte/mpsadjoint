@@ -6,7 +6,7 @@ This code repository is developed as a part of an existing research project esti
 ## Install
 
 ### Using docker
-The easiest way to run the code is to use the provided docker image. For this you need to have [Docker](https://docs.docker.com/get-docker/). Once docker is installed you can pull the image
+You can run the code using the provided docker image. For this you need to have [Docker](https://docs.docker.com/get-docker/). Once docker is installed you can pull the image
 ```
 docker pull ghcr.io/aashildte/mpsadjoint:latest
 ```
@@ -22,6 +22,20 @@ The code in this repository is pure python and can therefore be installed with `
 python -m pip install git+https://github.com/aashildte/mpsadjoint
 ```
 However, to run the code you need to have FEniCS. See https://fenicsproject.org/download/archive/ for more info about how to install FEniCS.
+
+### Using conda
+
+In order to run the code with Conda, install pyadjont as (following the description [here](https://anaconda.org/conda-forge/dolfin-adjoint));
+
+```
+conda install -c conda-forge dolfin-adjoint
+```
+
+then cyipopt (as described [here](https://cyipopt.readthedocs.io/en/stable/install.html#using-conda)) as:
+
+```
+conda install -c conda-forge cyipopt
+```
 
 ## Steps to reproduce results
 

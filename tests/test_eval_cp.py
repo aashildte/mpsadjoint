@@ -78,7 +78,7 @@ def test_cost_function_cb():
 
     u_opt = states[0].split()[0]
 
-    cost_fun_value = cost_function(geometry, [u_opt], [u_synthetic])
+    cost_fun_value = cost_function([u_opt], [u_synthetic])
     assert np.isclose(
         cost_fun_value, tracked_quantities[0][-1], atol=1e-6
     ), "Error: Mismatch between calculated cost function and final tracked cost function value"

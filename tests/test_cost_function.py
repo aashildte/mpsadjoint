@@ -26,14 +26,7 @@ def test_cost_diff_constant_u(u_model_arr, expected_cost_diff):
     u_data.interpolate(exp)
     u_model.assign(da.Constant((0.0, 0.0)))
 
-    geometry = Geometry(
-        mesh=mesh,
-        ds=None,
-    )
-
-    cost_diff = mpsadjoint.inverse.cost_function(geometry, [u_model], [u_data])
-
-    print(cost_diff)
+    cost_diff = mpsadjoint.inverse.cost_function([u_model], [u_data])
 
     assert math.isclose(cost_diff, expected_cost_diff)
 
@@ -62,31 +55,18 @@ def test_cost_diff_varying_u(u_model_arr, expected_cost_diff):
     u_data.interpolate(exp)
     u_model.assign(da.Constant((0.0, 0.0)))
 
-    geometry = Geometry(
-        mesh=mesh,
-        ds=None,
-    )
-
-    cost_diff = mpsadjoint.inverse.cost_function(geometry, [u_model], [u_data])
-
-    print(cost_diff)
+    cost_diff = mpsadjoint.inverse.cost_function([u_model], [u_data])
 
     assert math.isclose(cost_diff, expected_cost_diff)
 
 
 def test_cost_function():
     mesh = da.UnitSquareMesh(3, 3)
-    # U = df.FunctionSpace(mesh, "CG", 1)
     V = df.VectorFunctionSpace(mesh, "CG", 1)
     u_model = da.Function(V)
     u_data = da.Function(V)
-    # controls = [da.Function(U)]
 
-    geometry = Geometry(
-        mesh=mesh,
-        ds=None,
-    )
-    cost = mpsadjoint.inverse.cost_function(geometry, [u_model], [u_data])
+    cost = mpsadjoint.inverse.cost_function([u_model], [u_data])
 
     assert math.isclose(cost, 0.0)
 

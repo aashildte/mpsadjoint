@@ -54,7 +54,7 @@ class RobustReducedFunctional(da.ReducedFunctional):
         return value
 
 
-def cost_function(u_model : list(da.Function), u_data : list(da.Function)) -> float:
+def cost_function(u_model: list[da.Function], u_data: list[da.Function]) -> float:
     r"""
 
     Computes the difference between u_model and u_data as a surface integral.
@@ -295,11 +295,11 @@ def solve_optimization_problem(problem, maximum_iterations):
 
 
 def write_inversion_results(
-        mesh : da.Mesh,
-        active : list[da.Function],
-        theta : da.Function,
-        states : list[da.Function],
-        output_folder : dir):
+        mesh: da.Mesh,
+        active: list[da.Function],
+        theta: da.Function,
+        states: list[da.Function],
+        output_folder: str):
     """
     Saves results to disk by saving all as dolfin functions (xdmf files).
     Some of these are also used as checkpoint values in case the
@@ -361,7 +361,7 @@ def write_inversion_statistics(tracked_quantities, output_folder):
     np.save(f"{output_folder}/theta.npy", theta)
 
 
-def sort_data_after_displacement(u_data : list(da.Function)) -> list(da.Function):
+def sort_data_after_displacement(u_data: list[da.Function]) -> list[da.Function]:
     """
     Sort the data, i.e. actually the time steps used to access the data, after
     displacement norm
@@ -413,7 +413,7 @@ def solve_pdeconstrained_optimization_problem(
     return active_strain, theta, states, tracked_quantities
 
 
-def data_exist(output_folder : dir) -> bool:
+def data_exist(output_folder: str) -> bool:
     """
 
     Checks whether we already have calculated optimized values; this
@@ -550,11 +550,11 @@ def solve_iteratively(geometry, u_data, number_of_iterations, output_folder):
 
 
 def solve_inverse_problem(
-    geometry,
-    u_data,
-    output_folder=None,
-    number_of_iterations_iterative=100,
-    number_of_iterations_combined=100,
+    geometry: typing.NamedTuple,
+    u_data: list[da.Function],
+    output_folder: str = None,
+    number_of_iterations_iterative: int = 100,
+    number_of_iterations_combined: int = 100,
 ):
     """
 
@@ -621,14 +621,12 @@ def solve_inverse_problem(
             active_strain,
             theta,
             states,
-            output_folder
-            + f"/combined_{number_of_iterations_iterative}_{number_of_iterations_combined}",
+            f"{output_folder}/combined_{number_of_iterations_iterative}_{number_of_iterations_combined}",
         )
 
         write_inversion_statistics(
             tracked_quantities,
-            output_folder
-            + f"/combined_{number_of_iterations_iterative}_{number_of_iterations_combined}",
+            f"{output_folder}/combined_{number_of_iterations_iterative}_{number_of_iterations_combined}",
         )
 
     return active_strain, theta, states
@@ -667,9 +665,8 @@ def solve_inverse_problem_phase_3(
         theta_all.append(theta)
         u_data_all += u_d
 
-    assert len(active_all) == len(states_all) and len(active_all) == len(
-        u_data_all
-    ), "Error: Active / states / data do not have the same length."
+    assert len(active_all) == len(states_all) and len(active_all) == len(u_data_all), \
+            "Error: Active / states / data do not have the same length."
 
     # define average theta value
     theta_avg = df.Function(U, name="Theta")

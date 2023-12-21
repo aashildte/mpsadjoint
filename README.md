@@ -41,5 +41,8 @@ conda install -c conda-forge cyipopt
 
 TBW
 
+## Documentation
+See http://aashildte.github.io/mpsadjoint
+
 ## Need help
 Open an [issue](https://github.com/aashildte/mpsadjoint/issues/new) or send me en e-mail me at aashild@simula.no if you have questions.

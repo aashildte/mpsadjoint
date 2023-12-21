@@ -347,7 +347,7 @@ def write_inversion_results(
     write_strain_to_file(T2, strain_values, filename_strain_CG2)
 
 
-def write_inversion_statistics(tracked_quantities, output_folder):
+def write_inversion_statistics(tracked_quantities: list[float], output_folder: str):
     """
     Saves cost function values + average control values to file.
     """
@@ -451,7 +451,11 @@ def load_data(output_folder, U, TH, num_time_steps):
     return active, theta, states
 
 
-def solve_iteratively(geometry, u_data, number_of_iterations, output_folder):
+def solve_iteratively(
+        geometry: typing.NamedTuple,
+        u_data: list[da.Function],
+        number_of_iterations: int,
+        output_folder: str) -> tuple[list[da.Function], list[da.Function], list[da.Function]]:
     num_time_steps = len(u_data)
     heap = sort_data_after_displacement(u_data)
 
@@ -633,12 +637,12 @@ def solve_inverse_problem(
 
 
 def solve_inverse_problem_phase_3(
-    geometry,
-    u_data,
-    folders,
-    number_of_iterations_iterative=100,
-    number_of_iterations_combined=100,
-    number_of_iterations=100,
+    geometry: typing.NamedTuple,
+    u_data: list[da.Function],
+    folders: list[str],
+    number_of_iterations_iterative: int = 100,
+    number_of_iterations_combined: int = 100,
+    number_of_iterations: int = 100,
 ):
     active_all = []
     states_all = []
@@ -665,7 +669,7 @@ def solve_inverse_problem_phase_3(
         theta_all.append(theta)
         u_data_all += u_d
 
-    assert len(active_all) == len(states_all) and len(active_all) == len(u_data_all), \
+    assert (len(active_all) == len(states_all) and len(active_all) == len(u_data_all)), \
             "Error: Active / states / data do not have the same length."
 
     # define average theta value

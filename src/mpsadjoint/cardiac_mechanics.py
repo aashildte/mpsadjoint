@@ -134,8 +134,8 @@ def PK_stress_tensor(F, p, active_function, mat_params_tissue, theta):
     I4f = Jm1 * df.inner(C * f0, f0)
 
     mgamma = 1 - active_function
-    I1e = mgamma * I1 + (1 / mgamma ** 2 - mgamma) * I4f
-    I4fe = 1 / mgamma ** 2 * I4f
+    I1e = mgamma * I1 + (1 / mgamma**2 - mgamma) * I4f
+    I4fe = 1 / mgamma**2 * I4f
 
     psi = psi_holzapfel(I1e, I4fe, **mat_params_tissue)
     PK1 = df.diff(psi, F) + p * Jm1 * J * df.inv(F.T)

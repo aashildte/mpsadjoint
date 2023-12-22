@@ -10,11 +10,11 @@ from functools import partial
 import os
 import heapq
 import numpy as np
-import typing
 import dolfin as df
 import dolfin_adjoint as da
 
 from .nonlinearproblem import NonlinearProblem
+from .mesh_setup import Geometry
 
 from .cardiac_mechanics import (
     define_state_space,
@@ -34,7 +34,6 @@ from .io_files import (
 )
 
 
-
 class RobustReducedFunctional(da.ReducedFunctional):
     """
 
@@ -44,6 +43,7 @@ class RobustReducedFunctional(da.ReducedFunctional):
     the tape used to track previous simulations.
 
     """
+
     def __call__(self, *args, **kwargs):
         try:
             value = super().__call__(*args, **kwargs)
@@ -99,9 +99,7 @@ def cost_function(u_model: list[da.Function], u_data: list[da.Function]) -> floa
         if u_d_int > 0:
             cost_fun += surface_int(u_m - u_d) / u_d_int
         else:
-            print(
-                "Warning: Displacement value found to be zero; omitted from cost function."
-            )
+            print("Warning: Displacement value found to be zero; omitted from cost function.")
 
     print("Cost function displacement difference: ", float(cost_fun), flush=True)
 
@@ -198,9 +196,7 @@ def define_forward_problems(geometry, active_strain, theta, init_states=None):
     bcs = define_bcs(TH)
 
     newtonsolver = da.NewtonSolver()
-    newtonsolver.parameters.update(
-        {"relative_tolerance": 1e-5, "absolute_tolerance": 1e-5}
-    )
+    newtonsolver.parameters.update({"relative_tolerance": 1e-5, "absolute_tolerance": 1e-5})
 
     forward_problems = []
     states = []
@@ -248,13 +244,9 @@ def define_optimization_problem(states, u_data, geometry, control_variables):
     # track 3 values : cost fun, active, theta
     tracked_quantities = [[], [], []]
 
-    eval_cb = partial(
-        eval_cb_checkpoint, tracked_quantities=tracked_quantities, mesh=geometry.mesh
-    )
+    eval_cb = partial(eval_cb_checkpoint, tracked_quantities=tracked_quantities, mesh=geometry.mesh)
 
-    reduced_functional = RobustReducedFunctional(
-        cost_fun, control_params, eval_cb_post=eval_cb
-    )
+    reduced_functional = RobustReducedFunctional(cost_fun, control_params, eval_cb_post=eval_cb)
 
     # one bound for every active tension field + one bound for the fiber dir. angle
     bounds = [(0, 0.3)] * (len(control_variables) - 1) + [(-np.pi / 2, np.pi / 2)]
@@ -295,11 +287,12 @@ def solve_optimization_problem(problem, maximum_iterations):
 
 
 def write_inversion_results(
-        mesh: da.Mesh,
-        active: list[da.Function],
-        theta: da.Function,
-        states: list[da.Function],
-        output_folder: str):
+    mesh: da.Mesh,
+    active: list[da.Function],
+    theta: da.Function,
+    states: list[da.Function],
+    output_folder: str,
+):
     """
     Saves results to disk by saving all as dolfin functions (xdmf files).
     Some of these are also used as checkpoint values in case the
@@ -375,7 +368,7 @@ def sort_data_after_displacement(u_data: list[da.Function]) -> list[da.Function]
     """
 
     num_time_steps = len(u_data)
-    heap = []
+    heap: list[tuple[float, int]] = []
 
     for time_step in range(num_time_steps):
         disp_norm = df.assemble(df.inner(u_data[time_step], u_data[time_step]) * df.dx)
@@ -437,9 +430,7 @@ def data_exist(output_folder: str) -> bool:
 
 
 def load_data(output_folder, U, TH, num_time_steps):
-    active = read_active_strain_from_file(
-        U, output_folder + "/active_strain.xdmf", num_time_steps
-    )
+    active = read_active_strain_from_file(U, output_folder + "/active_strain.xdmf", num_time_steps)
     theta = read_fiber_angle_from_file(U, output_folder + "/theta.xdmf")
     states = read_states_from_file(
         TH,
@@ -452,10 +443,11 @@ def load_data(output_folder, U, TH, num_time_steps):
 
 
 def solve_iteratively(
-        geometry: typing.NamedTuple,
-        u_data: list[da.Function],
-        number_of_iterations: int,
-        output_folder: str) -> tuple[list[da.Function], list[da.Function], list[da.Function]]:
+    geometry: Geometry,
+    u_data: list[da.Function],
+    number_of_iterations: int,
+    output_folder: str | None,
+) -> tuple[list[da.Function], list[da.Function], list[da.Function]]:
     num_time_steps = len(u_data)
     heap = sort_data_after_displacement(u_data)
 
@@ -526,7 +518,7 @@ def solve_iteratively(
             output_folder,
         )
 
-    states_over_time2 = []
+    states_over_time2: list[da.Function] = []
     # make sure initial guesses will converge in phase 2
     theta = df.project(theta, U)
 
@@ -554,9 +546,9 @@ def solve_iteratively(
 
 
 def solve_inverse_problem(
-    geometry: typing.NamedTuple,
+    geometry: Geometry,
     u_data: list[da.Function],
-    output_folder: str = None,
+    output_folder: str | None = None,
     number_of_iterations_iterative: int = 100,
     number_of_iterations_combined: int = 100,
 ):
@@ -584,9 +576,7 @@ def solve_inverse_problem(
     if output_folder is None:
         output_folder_iters = None
     else:
-        output_folder_iters = (
-            output_folder + f"/iterative_{number_of_iterations_iterative}"
-        )
+        output_folder_iters = output_folder + f"/iterative_{number_of_iterations_iterative}"
 
         data_path = (
             output_folder
@@ -637,7 +627,7 @@ def solve_inverse_problem(
 
 
 def solve_inverse_problem_phase_3(
-    geometry: typing.NamedTuple,
+    geometry: Geometry,
     u_data: list[da.Function],
     folders: list[str],
     number_of_iterations_iterative: int = 100,
@@ -656,8 +646,7 @@ def solve_inverse_problem_phase_3(
 
     for folder, u_d in zip(folders, u_data):
         data_path = (
-            folder
-            + f"/combined_{number_of_iterations_iterative}_{number_of_iterations_combined}"
+            folder + f"/combined_{number_of_iterations_iterative}_{number_of_iterations_combined}"
         )
 
         assert data_exist(data_path), f"Error: Data in folder {data_path} do not exist."
@@ -669,8 +658,9 @@ def solve_inverse_problem_phase_3(
         theta_all.append(theta)
         u_data_all += u_d
 
-    assert (len(active_all) == len(states_all) and len(active_all) == len(u_data_all)), \
-            "Error: Active / states / data do not have the same length."
+    assert len(active_all) == len(states_all) and len(active_all) == len(
+        u_data_all
+    ), "Error: Active / states / data do not have the same length."
 
     # define average theta value
     theta_avg = df.Function(U, name="Theta")

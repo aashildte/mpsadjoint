@@ -4,8 +4,6 @@ import dolfin as df
 import pytest
 import mpsadjoint
 
-from mpsadjoint.mesh_setup import Geometry
-
 
 @pytest.mark.parametrize(
     "u_model_arr, expected_cost_diff",

@@ -20,9 +20,6 @@ keywords = ["finite element", "MPS", "cardiac", "adjoint"]
 urls = {Homepage = "https://github.com/aashildte/mpsadjoint"}
 requires-python = ">=3.8"
 dependencies = [
-    "pygmsh==6.0.2",
-    "meshio",
-    "lxml",
     "numpy",
     "scipy",
     "mpi4py",

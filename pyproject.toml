@@ -52,26 +52,6 @@ test = [
     "pytest-cov",
 ]
 
-[project.scripts]
-mpsadjoint = "mpsadjoint.cli:app"
-
-[tool.setuptools]
-include-package-data = true
-package-dir = {"" = "src"}
-zip-safe = false
-
-[tool.setuptools.packages.find]
-where = ["src"]
-namespaces = false
-
-
-[tool.aliases]
-test = "pytest"
-
-[tool.pytest.ini_options]
-addopts = "--cov=mpsadjoint --cov-report html --cov-report xml --cov-report term-missing -v"
-testpaths = ["tests"]
-
 
 [tool.mypy]
 files = ["src/mpsadjoint", "tests"]

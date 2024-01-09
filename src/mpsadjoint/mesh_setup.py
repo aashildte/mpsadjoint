@@ -2,7 +2,7 @@
 
 Åshild Telle / Simula Research Laboratory / 2022
 
-Loads mesh + bc surfaces for pillars
+Loads mesh + boundary condition surfaces for the pillars (in which Robin BCs will be applied).
 
 """
 
@@ -20,6 +20,20 @@ class Geometry(typing.NamedTuple):
 
 
 def load_mesh_h5(filename: typing.Union[str, os.PathLike], save_pvd_file: bool = False) -> Geometry:
+    """
+    
+    Function for loading pre-constructed mesh from h5 file. This mesh should
+    match the tissue shape and is expected to have pillars defined as a meshfunction.
+
+    Args:
+        filename - path to mesh file
+        save_pvd_file - if True, the mesh will be saved in a pvd file
+
+    Returns:
+        Geometry - nametuple with fields for mesh and pillars 
+
+    """
+
     comm = MPI.COMM_WORLD
     filename = Path(filename)
     if not filename.is_file():

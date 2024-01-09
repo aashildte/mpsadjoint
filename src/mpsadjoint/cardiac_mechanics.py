@@ -27,7 +27,7 @@ def set_fenics_parameters():
     df.parameters["form_compiler"]["quadrature_degree"] = 4
 
 
-def cond(a, k=100):
+def cond(a, k: float = 100):
     r"""
     Continuous approximation of the conditional term
 
@@ -89,7 +89,7 @@ def psi_neohookean(IIFx, C10=da.Constant(2000)):
     return C10 / 2 * (IIFx - 2)
 
 
-def fiber_direction(theta):
+def fiber_direction(theta: da.Function):
     """
 
     Defines fiber direction as a vector space, defined from a given angle.
@@ -134,8 +134,8 @@ def PK_stress_tensor(F, p, active_function, mat_params_tissue, theta):
     I4f = Jm1 * df.inner(C * f0, f0)
 
     mgamma = 1 - active_function
-    I1e = mgamma * I1 + (1 / mgamma**2 - mgamma) * I4f
-    I4fe = 1 / mgamma**2 * I4f
+    I1e = mgamma * I1 + (1 / mgamma ** 2 - mgamma) * I4f
+    I4fe = 1 / mgamma ** 2 * I4f
 
     psi = psi_holzapfel(I1e, I4fe, **mat_params_tissue)
     PK1 = df.diff(psi, F) + p * Jm1 * J * df.inv(F.T)
@@ -143,7 +143,7 @@ def PK_stress_tensor(F, p, active_function, mat_params_tissue, theta):
     return PK1
 
 
-def define_state_space(mesh):
+def define_state_space(mesh: da.Mesh):
     """
 
     Defines a function space over Taylor-Hood (P2-P1) elements, which
@@ -165,29 +165,34 @@ def define_state_space(mesh):
     return TH
 
 
-def define_bcs(TH):
+def define_bcs(TH: df.FunctionSpace) -> list[da.DirichletBC]:
     """
 
-    Defines boundary conditions, Dirichlet ones, based on boundary_markers.
+    Defines Dirichlet boundary conditions. This is sort of a hack;
+    Dolfin adjoint doesn't allow no bcs so we are adding an empty set
 
     Args:
         TH: function space in which the state is defined over; P2-P1
 
     Returns:
-        DirichletBC: instance
+        list of DirichletBC
 
     """
     V, _ = TH.split()
 
-    # This is sort of a hack; dolfin adjoint doesn't allow no bcs
-    # so we are adding an empty set of bcs
     xmin_bnd = "0"
     bcs = [da.DirichletBC(V, da.Constant(np.zeros(2)), xmin_bnd)]
 
     return bcs
 
 
-def remove_rigid_motion_term(mesh, u, r, state, test_state):
+def remove_rigid_motion_term(
+    mesh: da.Mesh,
+    u: da.Function,
+    r: da.Function,
+    state: da.Function,
+    test_state: df.TestFunction,
+):
     """
 
     Defines the part of the weak form which removes rigid motion,
@@ -204,8 +209,6 @@ def remove_rigid_motion_term(mesh, u, r, state, test_state):
 
     """
 
-    # position = df.SpatialCoordinate(mesh)
-
     RM = [
         da.Constant((1, 0)),
         da.Constant((0, 1)),
@@ -217,7 +220,13 @@ def remove_rigid_motion_term(mesh, u, r, state, test_state):
     return df.derivative(Pi, state, test_state)
 
 
-def define_weak_form(TH, active_function, theta, ds, mat_params_tissue={}):
+def define_weak_form(
+    TH: df.FunctionSpace,
+    active_function: list[da.Function],
+    theta: da.Function,
+    ds: df.MeshFunction,
+    mat_params_tissue: dict[str, float] = {},
+) -> ufl.form.Form:
     """
 
     Defines trial and test functions + weak form.
@@ -257,7 +266,7 @@ def define_weak_form(TH, active_function, theta, ds, mat_params_tissue={}):
     return weak_form, state
 
 
-def solve_forward_problem(R, state, bcs):
+def solve_forward_problem(R, state, bcs: list[da.DirichletBC]):
     """
 
     Solves the forward mechanical problem.
@@ -295,8 +304,8 @@ def solve_forward_problem_iteratively(
     state_function,
     newtonsolver,
     problem,
-    active,
-    theta,
+    active: da.Function,
+    theta: da.Function,
     step_length=0.1,
 ):
     """
@@ -326,6 +335,10 @@ def solve_forward_problem_iteratively(
         step_length: float between 0 and 1, how large steps we want
             to use for stepping up to expected values
     """
+
+    print(type(newtonsolver))
+    print(type(problem))
+    exit()
 
     assert step_length > 1e-14, "Error: Really low step length – aborting"
     assert step_length <= 1.0, "Error: Step length can't be > 1."

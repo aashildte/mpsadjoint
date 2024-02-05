@@ -339,10 +339,6 @@ def solve_forward_problem_iteratively(
             to use for stepping up to expected values
     """
 
-    print(type(newtonsolver))
-    print(type(problem))
-    exit()
-
     assert step_length > 1e-14, "Error: Really low step length – aborting"
     assert step_length <= 1.0, "Error: Step length can't be > 1."
 

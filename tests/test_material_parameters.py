@@ -37,13 +37,7 @@ def forward_problem_material_parameters(TH, ds, bcs, a, b, af, bf):
 
     material_parameters = {"a": a, "b": b, "af": af, "bf": bf}
 
-    R, state = define_weak_form(
-        TH,
-        active,
-        theta,
-        ds,
-        material_parameters,
-    )
+    R, state = define_weak_form(TH, active, theta, ds, material_parameters)
 
     solve_forward_problem(R, state, bcs)
 
@@ -61,12 +55,22 @@ def test_material_parameters():
     b = da.Constant(9.726)
     bf = da.Constant(15.779)
 
-    u_standard = forward_problem_material_parameters(TH, ds=ds, bcs=bcs, a=a, b=b, af=af, bf=bf)
+    u_standard = forward_problem_material_parameters(
+        TH, ds=ds, bcs=bcs, a=a, b=b, af=af, bf=bf
+    )
 
-    u_a = forward_problem_material_parameters(TH, ds, bcs, a=da.Constant(2 * a), b=b, af=af, bf=bf)
-    u_b = forward_problem_material_parameters(TH, ds, bcs, a=a, b=da.Constant(2 * b), af=af, bf=bf)
-    u_af = forward_problem_material_parameters(TH, ds, bcs, a=a, b=b, af=da.Constant(2 * af), bf=bf)
-    u_bf = forward_problem_material_parameters(TH, ds, bcs, a=a, b=b, af=af, bf=da.Constant(2 * bf))
+    u_a = forward_problem_material_parameters(
+        TH, ds, bcs, a=da.Constant(2 * a), b=b, af=af, bf=bf
+    )
+    u_b = forward_problem_material_parameters(
+        TH, ds, bcs, a=a, b=da.Constant(2 * b), af=af, bf=bf
+    )
+    u_af = forward_problem_material_parameters(
+        TH, ds, bcs, a=a, b=b, af=da.Constant(2 * af), bf=bf
+    )
+    u_bf = forward_problem_material_parameters(
+        TH, ds, bcs, a=a, b=b, af=af, bf=da.Constant(2 * bf)
+    )
 
     norm = lambda f: df.assemble(df.inner(f, f) * df.dx(mesh))
     volume = norm(da.Constant(1))

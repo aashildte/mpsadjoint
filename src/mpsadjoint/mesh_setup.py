@@ -19,7 +19,9 @@ class Geometry(typing.NamedTuple):
     ds: df.Measure
 
 
-def load_mesh_h5(filename: typing.Union[str, os.PathLike], save_pvd_file: bool = False) -> Geometry:
+def load_mesh_h5(
+    filename: typing.Union[str, os.PathLike], save_pvd_file: bool = False
+) -> Geometry:
     """
     
     Function for loading pre-constructed mesh from h5 file. This mesh should

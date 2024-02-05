@@ -1,6 +1,6 @@
-import dolfin
 from pathlib import Path
 import pytest
+import dolfin
 from mpsadjoint import mesh_setup
 
 
@@ -14,7 +14,9 @@ def test_load_mesh_h5():
     if filename.is_file():
         filename.unlink()
 
-    with dolfin.HDF5File(mesh.mpi_comm(), filename.as_posix(), "w") as h5file:
+    with dolfin.HDF5File(
+        mesh.mpi_comm(), filename.as_posix(), "w"
+    ) as h5file:
         h5file.write(mesh, "mesh")
         h5file.write(pillar_bcs, "curves")
 

@@ -10,6 +10,7 @@ checkpointing in Phase 1.
 
 import os
 import typing
+import ufl
 import dolfin as df
 import dolfin_adjoint as da
 
@@ -132,10 +133,7 @@ def write_fiber_direction_to_file(
     """
 
     rotation_matrix = df.as_matrix(
-        (
-            (df.cos(theta), -df.sin(theta)),
-            (df.sin(theta), df.cos(theta)),
-        )
+        ((df.cos(theta), -df.sin(theta)), (df.sin(theta), df.cos(theta)))
     )
 
     fiber_dir = rotation_matrix * df.as_vector([1.0, 0.0])

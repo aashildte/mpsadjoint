@@ -28,15 +28,13 @@ def mps_to_fenics(mps_data, mps_info, mesh, time_start, time_stop):
     for t in range(time_start, time_stop):
         u = da.Function(V2, name=r"Displacement BF data ($\mu m$)")
 
-        ip_fun = mps_interpolation(
-            mps_data[t],
-            xcoords,
-            ycoords,
-        )
+        ip_fun = mps_interpolation(mps_data[t], xcoords, ycoords)
 
         xvalues, yvalues = ip_fun(mesh_xcoords, mesh_ycoords)
 
-        u.vector()[v_d] = np.array((xvalues, yvalues)).transpose().flatten()
+        u.vector()[v_d] = (
+            np.array((xvalues, yvalues)).transpose().flatten()
+        )
         u_data.append(u)
 
     return u_data

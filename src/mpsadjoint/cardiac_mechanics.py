@@ -5,6 +5,7 @@
 """
 
 import numpy as np
+import ufl
 import dolfin as df
 import dolfin_adjoint as da
 
@@ -102,7 +103,9 @@ def fiber_direction(theta: da.Function):
 
     """
 
-    R = df.as_matrix(((df.cos(theta), -df.sin(theta)), (df.sin(theta), df.cos(theta))))
+    R = df.as_matrix(
+        ((df.cos(theta), -df.sin(theta)), (df.sin(theta), df.cos(theta)))
+    )
 
     return R * df.as_vector([1.0, 0.0])
 
@@ -358,8 +361,11 @@ def solve_forward_problem_iteratively(
     try:
         for n in range(N):
             print(f"* Solving for step {n + 1} / {N + 1}")
-            new_active_values = original_active_values + n * step_length * (
-                active_values - original_active_values
+            new_active_values = (
+                original_active_values
+                + n
+                * step_length
+                * (active_values - original_active_values)
             )
             new_theta_values = original_theta_values + n * step_length * (
                 theta_values - original_theta_values

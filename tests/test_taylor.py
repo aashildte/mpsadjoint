@@ -32,12 +32,7 @@ def setup_mesh_funspaces():
 def create_forward_problem(TH, active, theta, geometry, bcs):
     set_fenics_parameters()
 
-    R, state = define_weak_form(
-        TH,
-        active,
-        theta,
-        geometry.ds,
-    )
+    R, state = define_weak_form(TH, active, theta, geometry.ds)
 
     solve_forward_problem(R, state, bcs)
 
@@ -75,11 +70,12 @@ def test_taylor_unit_cube():
     J = errornorm(u, u_synthetic, mesh)
 
     reduced_functional = da.ReducedFunctional(
-        J,
-        [da.Control(active_ctrl), da.Control(theta_ctrl)],
+        J, [da.Control(active_ctrl), da.Control(theta_ctrl)]
     )
 
-    results = da.taylor_to_dict(reduced_functional, [da.Function(U), da.Function(U)], h)
+    results = da.taylor_to_dict(
+        reduced_functional, [da.Function(U), da.Function(U)], h
+    )
 
     assert min(results["R0"]["Rate"]) > 0.9
     assert min(results["R1"]["Rate"]) > 1.9

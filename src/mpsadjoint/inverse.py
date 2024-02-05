@@ -1,8 +1,8 @@
 """
 
-Code for solving the inverse problem; optimization part.
+Code for solving the inverse problem; optimization part. Core part of the code.
 
-Åshild Telle, Henrik Finsberg // Simula Research Laboratory // 2022–2023
+Åshild Telle, Henrik Finsberg // Simula Research Laboratory // 2024
 
 """
 
@@ -12,6 +12,7 @@ import heapq
 import numpy as np
 import dolfin as df
 import dolfin_adjoint as da
+import ufl
 
 from .nonlinearproblem import NonlinearProblem
 from .mesh_setup import Geometry
@@ -48,13 +49,18 @@ class RobustReducedFunctional(da.ReducedFunctional):
         try:
             value = super().__call__(*args, **kwargs)
         except RuntimeError:
-            print("Warning: Forward computation crashed. Resuming...", flush=True)
+            print(
+                "Warning: Forward computation crashed. Resuming...",
+                flush=True,
+            )
             value = np.nan
 
         return value
 
 
-def cost_function(u_model: list[da.Function], u_data: list[da.Function]) -> float:
+def cost_function(
+    u_model: list[da.Function], u_data: list[da.Function]
+) -> float:
     r"""
 
     Computes the difference between u_model and u_data as a surface integral.
@@ -93,24 +99,37 @@ def cost_function(u_model: list[da.Function], u_data: list[da.Function]) -> floa
         if E_d_int > 0:
             cost_fun += surface_int(E_m - E_d) / E_d_int
         else:
-            print("Warning: Strain value found to be zero; omitted from cost function.")
+            print(
+                "Warning: Strain value found to be zero; omitted from cost function."
+            )
 
         u_d_int = surface_int(u_d)
         if u_d_int > 0:
             cost_fun += surface_int(u_m - u_d) / u_d_int
         else:
-            print("Warning: Displacement value found to be zero; omitted from cost function.")
+            print(
+                "Warning: Displacement value found to be zero; omitted from cost function."
+            )
 
-    print("Cost function displacement difference: ", float(cost_fun), flush=True)
+    print(
+        "Cost function displacement difference: ",
+        float(cost_fun),
+        flush=True,
+    )
 
     return cost_fun
 
 
-def eval_cb_checkpoint(cost_cur, control_params, tracked_quantities, mesh):
+def eval_cb_checkpoint(
+    cost_cur: float,
+    control_params: list[da.Function],
+    tracked_quantities: list[list[float]],
+    mesh: da.Mesh,
+):
     """
 
     This function is called after every successful (acceptable) iteration
-    by the inverse solver.
+    by the inverse solver, tracking certain values of interest.
 
     Args:
         cost_cur: built-in argument; cost function value
@@ -139,13 +158,13 @@ def eval_cb_checkpoint(cost_cur, control_params, tracked_quantities, mesh):
     tracked_quantities[2].append(theta_avg)
 
 
-def initiate_controls(geometry, init_active_strain, init_theta):
+def initiate_controls(mesh: da.Mesh, init_active_strain, init_theta):
     """
 
     Initiates variables for active strain + theta, given initial guesses.
 
     Args:
-        geometry: Geometry object
+        mesh - computational domain, mesh representation
         init_active_strain: initial values (can be constants)
             for active strain values
         init_theta: initial values (can be constant) for the
@@ -158,7 +177,7 @@ def initiate_controls(geometry, init_active_strain, init_theta):
             constant for all time steps
 
     """
-    U = df.FunctionSpace(geometry.mesh, "CG", 1)
+    U = df.FunctionSpace(mesh, "CG", 1)
 
     active_strain = []
 
@@ -173,7 +192,9 @@ def initiate_controls(geometry, init_active_strain, init_theta):
     return active_strain, theta
 
 
-def define_forward_problems(geometry, active_strain, theta, init_states=None):
+def define_forward_problems(
+    geometry, active_strain, theta, init_states=None
+):
     """
 
     Defines all forward (mechanical) problems; including interpolation
@@ -196,14 +217,18 @@ def define_forward_problems(geometry, active_strain, theta, init_states=None):
     bcs = define_bcs(TH)
 
     newtonsolver = da.NewtonSolver()
-    newtonsolver.parameters.update({"relative_tolerance": 1e-5, "absolute_tolerance": 1e-5})
+    newtonsolver.parameters.update(
+        {"relative_tolerance": 1e-5, "absolute_tolerance": 1e-5}
+    )
 
     forward_problems = []
     states = []
 
     for time_step, active_str in enumerate(active_strain):
         print("Solving forward problem step ", time_step, flush=True)
-        weak_form, state = define_weak_form(TH, active_str, theta, geometry.ds)
+        weak_form, state = define_weak_form(
+            TH, active_str, theta, geometry.ds
+        )
 
         if init_states is not None:
             state.vector()[:] = init_states[time_step].vector()[:]
@@ -217,7 +242,9 @@ def define_forward_problems(geometry, active_strain, theta, init_states=None):
     return newtonsolver, forward_problems, states
 
 
-def define_optimization_problem(states, u_data, geometry, control_variables):
+def define_optimization_problem(
+    states, u_data, geometry, control_variables
+):
     """
     Defines key variables for the optimization problem, as well as the
     problem itself.
@@ -244,14 +271,24 @@ def define_optimization_problem(states, u_data, geometry, control_variables):
     # track 3 values : cost fun, active, theta
     tracked_quantities = [[], [], []]
 
-    eval_cb = partial(eval_cb_checkpoint, tracked_quantities=tracked_quantities, mesh=geometry.mesh)
+    eval_cb = partial(
+        eval_cb_checkpoint,
+        tracked_quantities=tracked_quantities,
+        mesh=geometry.mesh,
+    )
 
-    reduced_functional = RobustReducedFunctional(cost_fun, control_params, eval_cb_post=eval_cb)
+    reduced_functional = RobustReducedFunctional(
+        cost_fun, control_params, eval_cb_post=eval_cb
+    )
 
     # one bound for every active tension field + one bound for the fiber dir. angle
-    bounds = [(0, 0.3)] * (len(control_variables) - 1) + [(-np.pi / 2, np.pi / 2)]
+    bounds = [(0, 0.3)] * (len(control_variables) - 1) + [
+        (-np.pi / 2, np.pi / 2)
+    ]
 
-    optimization_problem = da.MinimizationProblem(reduced_functional, bounds=bounds)
+    optimization_problem = da.MinimizationProblem(
+        reduced_functional, bounds=bounds
+    )
 
     return optimization_problem, tracked_quantities
 
@@ -340,7 +377,9 @@ def write_inversion_results(
     write_strain_to_file(T2, strain_values, filename_strain_CG2)
 
 
-def write_inversion_statistics(tracked_quantities: list[float], output_folder: str):
+def write_inversion_statistics(
+    tracked_quantities: list[float], output_folder: str
+):
     """
     Saves cost function values + average control values to file.
     """
@@ -354,7 +393,9 @@ def write_inversion_statistics(tracked_quantities: list[float], output_folder: s
     np.save(f"{output_folder}/theta.npy", theta)
 
 
-def sort_data_after_displacement(u_data: list[da.Function]) -> list[da.Function]:
+def sort_data_after_displacement(
+    u_data: list[da.Function],
+) -> list[da.Function]:
     """
     Sort the data, i.e. actually the time steps used to access the data, after
     displacement norm
@@ -371,16 +412,25 @@ def sort_data_after_displacement(u_data: list[da.Function]) -> list[da.Function]
     heap: list[tuple[float, int]] = []
 
     for time_step in range(num_time_steps):
-        disp_norm = df.assemble(df.inner(u_data[time_step], u_data[time_step]) * df.dx)
+        disp_norm = df.assemble(
+            df.inner(u_data[time_step], u_data[time_step]) * df.dx
+        )
         heapq.heappush(heap, (disp_norm, time_step))
 
     return heap
 
 
 def solve_pdeconstrained_optimization_problem(
-    geometry, u_data, init_active_strain, init_theta, init_states, number_of_iterations
+    geometry,
+    u_data: list[da.Function],
+    init_active_strain,
+    init_theta,
+    init_states,
+    number_of_iterations: int,
 ):
-    active_strain, theta = initiate_controls(geometry, init_active_strain, init_theta)
+    active_strain, theta = initiate_controls(
+        geometry.mesh, init_active_strain, init_theta
+    )
 
     newtonsolver, forward_problems, states = define_forward_problems(
         geometry, active_strain, theta, init_states
@@ -392,7 +442,9 @@ def solve_pdeconstrained_optimization_problem(
         states, u_data, geometry, control_variables
     )
 
-    optimal_values = solve_optimization_problem(problem, number_of_iterations)
+    optimal_values = solve_optimization_problem(
+        problem, number_of_iterations
+    )
 
     *optimal_active_strain, optimal_theta = optimal_values
 
@@ -400,7 +452,13 @@ def solve_pdeconstrained_optimization_problem(
         active_strain, states, optimal_active_strain, forward_problems
     ):
         solve_forward_problem_iteratively(
-            active, theta, state, newtonsolver, problem, optimal_active, optimal_theta
+            active,
+            theta,
+            state,
+            newtonsolver,
+            problem,
+            optimal_active,
+            optimal_theta,
         )
 
     return active_strain, theta, states, tracked_quantities
@@ -430,7 +488,9 @@ def data_exist(output_folder: str) -> bool:
 
 
 def load_data(output_folder, U, TH, num_time_steps):
-    active = read_active_strain_from_file(U, output_folder + "/active_strain.xdmf", num_time_steps)
+    active = read_active_strain_from_file(
+        U, output_folder + "/active_strain.xdmf", num_time_steps
+    )
     theta = read_fiber_angle_from_file(U, output_folder + "/theta.xdmf")
     states = read_states_from_file(
         TH,
@@ -477,7 +537,9 @@ def solve_iteratively(
                 f"iteration {iteration_num} / {len(u_data)}",
                 flush=True,
             )
-            active_strain, theta, states = load_data(output_folder_t, U, TH, 1)
+            active_strain, theta, states = load_data(
+                output_folder_t, U, TH, 1
+            )
         else:
             print(
                 f"Starting inversion for time step {time_step}; "
@@ -500,13 +562,21 @@ def solve_iteratively(
 
             if output_folder is not None:
                 write_inversion_results(
-                    geometry.mesh, active_strain, theta, states, output_folder_t
+                    geometry.mesh,
+                    active_strain,
+                    theta,
+                    states,
+                    output_folder_t,
                 )
 
-                write_inversion_statistics(tracked_quantities, output_folder_t)
+                write_inversion_statistics(
+                    tracked_quantities, output_folder_t
+                )
 
         theta_over_time[time_step] = da.project(theta, U)
-        active_strain_over_time[time_step] = da.project(active_strain[0], U)
+        active_strain_over_time[time_step] = da.project(
+            active_strain[0], U
+        )
         states_over_time[time_step] = states[0]
 
     if output_folder is not None and not data_exist(output_folder):
@@ -576,7 +646,9 @@ def solve_inverse_problem(
     if output_folder is None:
         output_folder_iters = None
     else:
-        output_folder_iters = output_folder + f"/iterative_{number_of_iterations_iterative}"
+        output_folder_iters = (
+            output_folder + f"/iterative_{number_of_iterations_iterative}"
+        )
 
         data_path = (
             output_folder
@@ -588,12 +660,17 @@ def solve_inverse_problem(
             U = df.FunctionSpace(geometry.mesh, "CG", 1)
 
             print("Data already exists, returning ..", flush=True)
-            active_strain, theta, states = load_data(data_path, U, TH, len(u_data))
+            active_strain, theta, states = load_data(
+                data_path, U, TH, len(u_data)
+            )
             return active_strain, theta, states
 
     if number_of_iterations_iterative > 0:
         active_strain, theta, states = solve_iteratively(
-            geometry, u_data, number_of_iterations_iterative, output_folder_iters
+            geometry,
+            u_data,
+            number_of_iterations_iterative,
+            output_folder_iters,
         )
     else:
         active_strain = [da.Constant(0) for _ in range(len(u_data))]
@@ -606,7 +683,12 @@ def solve_inverse_problem(
         states,
         tracked_quantities,
     ) = solve_pdeconstrained_optimization_problem(
-        geometry, u_data, active_strain, theta, states, number_of_iterations_combined
+        geometry,
+        u_data,
+        active_strain,
+        theta,
+        states,
+        number_of_iterations_combined,
     )
 
     if output_folder is not None:
@@ -646,12 +728,17 @@ def solve_inverse_problem_phase_3(
 
     for folder, u_d in zip(folders, u_data):
         data_path = (
-            folder + f"/combined_{number_of_iterations_iterative}_{number_of_iterations_combined}"
+            folder
+            + f"/combined_{number_of_iterations_iterative}_{number_of_iterations_combined}"
         )
 
-        assert data_exist(data_path), f"Error: Data in folder {data_path} do not exist."
+        assert data_exist(
+            data_path
+        ), f"Error: Data in folder {data_path} do not exist."
 
-        active_strain, theta, states = load_data(data_path, U, TH, len(u_data[0]))
+        active_strain, theta, states = load_data(
+            data_path, U, TH, len(u_data[0])
+        )
 
         active_all += active_strain
         states_all += states
@@ -677,10 +764,17 @@ def solve_inverse_problem_phase_3(
     for i, theta_t in enumerate(theta_all):
         print("Dose: ", i)
         for t, (active, state) in enumerate(
-            zip(active_all[i * T : (i + 1) * T], states_all[i * T : (i + 1) * T])
+            zip(
+                active_all[i * T : (i + 1) * T],
+                states_all[i * T : (i + 1) * T],
+            )
         ):
             print("Solving for time step ", t, flush=True)
-            newtonsolver, forward_problems, state2 = define_forward_problems(
+            (
+                newtonsolver,
+                forward_problems,
+                state2,
+            ) = define_forward_problems(
                 geometry, [active], theta_t, init_states=[state]
             )
 
@@ -726,6 +820,8 @@ def solve_inverse_problem_phase_3(
             output_folder + name,
         )
 
-        write_inversion_statistics(tracked_quantities, output_folder + name)
+        write_inversion_statistics(
+            tracked_quantities, output_folder + name
+        )
 
     return active_all, theta, states_all

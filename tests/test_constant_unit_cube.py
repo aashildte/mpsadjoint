@@ -9,9 +9,7 @@ from mpsadjoint.cardiac_mechanics import (
     define_weak_form,
     solve_forward_problem,
 )
-from mpsadjoint.inverse import (
-    solve_inverse_problem,
-)
+from mpsadjoint.inverse import solve_inverse_problem
 
 from mpsadjoint.mesh_setup import Geometry
 
@@ -57,15 +55,16 @@ def test_constant_high():
     # then solve the inverse problem
 
     active_m, _, _ = solve_inverse_problem(
-        geometry=geometry,
-        u_data=[u_synthetic],
+        geometry=geometry, u_data=[u_synthetic]
     )
 
     active_avg = df.assemble(active_m[0] * df.dx) / df.assemble(
         da.Constant(1) * df.dx(geometry.mesh)
     )
 
-    assert math.isclose(active_avg, active, abs_tol=0.1), "Error: Could not solve constant problem"
+    assert math.isclose(
+        active_avg, active, abs_tol=0.1
+    ), "Error: Could not solve constant problem"
 
 
 def test_constant():
@@ -85,8 +84,7 @@ def test_constant():
     # then consider the inverse problem
 
     active_m, _, _ = solve_inverse_problem(
-        geometry=geometry,
-        u_data=[u_synthetic],
+        geometry=geometry, u_data=[u_synthetic]
     )
 
     active_avg = df.assemble(active_m[0] * df.dx) / df.assemble(

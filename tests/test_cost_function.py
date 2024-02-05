@@ -1,6 +1,6 @@
 import math
-import dolfin_adjoint as da
 import dolfin as df
+import dolfin_adjoint as da
 import pytest
 import mpsadjoint
 
@@ -20,7 +20,12 @@ def test_cost_diff_constant_u(u_model_arr, expected_cost_diff):
     u_model = da.Function(V)
     u_data = da.Function(V)
 
-    exp = da.Expression(("ax", "ay"), ax=u_model_arr[0], ay=u_model_arr[1], element=V.ufl_element())
+    exp = da.Expression(
+        ("ax", "ay"),
+        ax=u_model_arr[0],
+        ay=u_model_arr[1],
+        element=V.ufl_element(),
+    )
     u_data.interpolate(exp)
     u_model.assign(da.Constant((0.0, 0.0)))
 

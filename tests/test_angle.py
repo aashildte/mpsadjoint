@@ -1,18 +1,12 @@
 from mpsadjoint.cardiac_mechanics import fiber_direction
 import pytest
 import numpy as np
+import ufl
 import dolfin as df
 
 
 @pytest.mark.parametrize(
-    "theta",
-    [
-        -np.pi / 2,
-        -np.pi / 4,
-        0,
-        np.pi / 4,
-        np.pi / 2,
-    ],
+    "theta", [-np.pi / 2, -np.pi / 4, 0, np.pi / 4, np.pi / 2]
 )
 def calculate_fiber_direction_norm(theta):
     mesh = df.UnitSquareMesh(2, 2)

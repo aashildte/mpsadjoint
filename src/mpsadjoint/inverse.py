@@ -158,7 +158,7 @@ def eval_cb_checkpoint(
     tracked_quantities[2].append(theta_avg)
 
 
-def initiate_controls(mesh: da.Mesh, init_active_strain, init_theta):
+def initiate_controls(mesh: da.Mesh, init_active_strain: list[da.Function], init_theta: da.Function):
     """
 
     Initiates variables for active strain + theta, given initial guesses.
@@ -193,15 +193,16 @@ def initiate_controls(mesh: da.Mesh, init_active_strain, init_theta):
 
 
 def define_forward_problems(
-    geometry, active_strain, theta, init_states=None
-):
+    geometry, active_strain: list[da.Function], theta: da.Function, init_states: list[da.Function]=None
+) -> tuple[list[da.NewtonSolver], list[NonlinearProblem], list[da.Function]]:
+
     """
 
     Defines all forward (mechanical) problems; including interpolation
     based on previous states when applicable.
 
     Args:
-        geometry: Geometry object; mesh + surfaces
+        geometry: Geometry object; mesh + ds defined over pillars
         active_strain: list of active strain functions
         theta: fiber direction angle function
         init_states: start from here; initial guesses. Not used if not set.
@@ -243,8 +244,8 @@ def define_forward_problems(
 
 
 def define_optimization_problem(
-    states, u_data, geometry, control_variables
-):
+        states: list[da.Function], u_data: list[da.Function], mesh: da.Mesh, control_variables : list[da.Function]
+) -> tuple[da.MinimizationProblem, list[list[float]]]:
     """
     Defines key variables for the optimization problem, as well as the
     problem itself.
@@ -252,7 +253,7 @@ def define_optimization_problem(
     Args:
         states: list of da.Function objects, all states over time
         u_data: list of da.Function objects, data displacement over time
-        geometry: Geometry object (mesh + surfaces)
+        mesh: geometrical domain
         control variables: list of da.Function objects, to be optimized
 
     Returns:
@@ -274,7 +275,7 @@ def define_optimization_problem(
     eval_cb = partial(
         eval_cb_checkpoint,
         tracked_quantities=tracked_quantities,
-        mesh=geometry.mesh,
+        mesh=mesh,
     )
 
     reduced_functional = RobustReducedFunctional(
@@ -336,7 +337,7 @@ def write_inversion_results(
     optimization process is disrupted.
 
     Args:
-        mesh: mesh used for the FEM simulations
+        mesh: geometrical domain
         active: list of active tension fields (one function per time step)
         theta: fiber direction field
         states: list of states (P2-P1 functions; one state per time step)
@@ -401,7 +402,7 @@ def sort_data_after_displacement(
     displacement norm
 
     Args:
-        u_data: list of displacement data
+        u_data: list of displacement functions representing original data
 
     Returns:
         heap with displacement norms as value, time_steps as values
@@ -423,11 +424,24 @@ def sort_data_after_displacement(
 def solve_pdeconstrained_optimization_problem(
     geometry,
     u_data: list[da.Function],
-    init_active_strain,
-    init_theta,
-    init_states,
+    init_active_strain : list[da.Function] | list[da.Constant],
+    init_theta: da.Function | da.Constant,
+    init_states: list[da.Function],
     number_of_iterations: int,
 ):
+    """
+
+    Args:
+        geometry: mesh + ds for pillars
+        u_data: list of displacement functions representing original data
+        init_active_strain: list of initial guesses for the active strain field
+        init_theta: initial guess for the fiber direction angle function
+        init_states: list of states corresponding to the solution of the 
+            init_active_strain and init_theta fields
+        number_of_iterations: number of iterations to use in the optimization problem
+
+    """
+
     active_strain, theta = initiate_controls(
         geometry.mesh, init_active_strain, init_theta
     )
@@ -439,7 +453,7 @@ def solve_pdeconstrained_optimization_problem(
     control_variables = active_strain[:] + [theta]
 
     problem, tracked_quantities = define_optimization_problem(
-        states, u_data, geometry, control_variables
+        states, u_data, geometry.mesh, control_variables
     )
 
     optimal_values = solve_optimization_problem(

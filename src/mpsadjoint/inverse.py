@@ -158,7 +158,11 @@ def eval_cb_checkpoint(
     tracked_quantities[2].append(theta_avg)
 
 
-def initiate_controls(mesh: da.Mesh, init_active_strain: list[da.Function], init_theta: da.Function):
+def initiate_controls(
+    mesh: da.Mesh,
+    init_active_strain: list[da.Function],
+    init_theta: da.Function,
+):
     """
 
     Initiates variables for active strain + theta, given initial guesses.
@@ -193,8 +197,13 @@ def initiate_controls(mesh: da.Mesh, init_active_strain: list[da.Function], init
 
 
 def define_forward_problems(
-    geometry, active_strain: list[da.Function], theta: da.Function, init_states: list[da.Function]=None
-) -> tuple[list[da.NewtonSolver], list[NonlinearProblem], list[da.Function]]:
+    geometry: Geometry,
+    active_strain: list[da.Function],
+    theta: da.Function,
+    init_states: list[da.Function] = None,
+) -> tuple[
+    list[da.NewtonSolver], list[NonlinearProblem], list[da.Function]
+]:
 
     """
 
@@ -244,7 +253,10 @@ def define_forward_problems(
 
 
 def define_optimization_problem(
-        states: list[da.Function], u_data: list[da.Function], mesh: da.Mesh, control_variables : list[da.Function]
+    states: list[da.Function],
+    u_data: list[da.Function],
+    mesh: da.Mesh,
+    control_variables: list[da.Function],
 ) -> tuple[da.MinimizationProblem, list[list[float]]]:
     """
     Defines key variables for the optimization problem, as well as the
@@ -294,10 +306,12 @@ def define_optimization_problem(
     return optimization_problem, tracked_quantities
 
 
-def solve_optimization_problem(problem, maximum_iterations):
+def solve_optimization_problem(
+    problem: da.MinimazationProblem, maximum_iterations: int
+) -> list[da.Function]:
     """
 
-    Runs the main optimization script.
+    Initiates and runs optimization problem through IPOPT.
 
     Args:
         problem: minimization problem to solve
@@ -422,13 +436,15 @@ def sort_data_after_displacement(
 
 
 def solve_pdeconstrained_optimization_problem(
-    geometry,
+    geometry: Geometry,
     u_data: list[da.Function],
-    init_active_strain : list[da.Function] | list[da.Constant],
+    init_active_strain: list[da.Function] | list[da.Constant],
     init_theta: da.Function | da.Constant,
     init_states: list[da.Function],
     number_of_iterations: int,
-):
+) -> tuple[
+    list[da.Function], da.Function, list[da.Function], list[list[float]]
+]:
     """
 
     Args:
@@ -439,6 +455,12 @@ def solve_pdeconstrained_optimization_problem(
         init_states: list of states corresponding to the solution of the 
             init_active_strain and init_theta fields
         number_of_iterations: number of iterations to use in the optimization problem
+
+    Returns:
+        list of active strain fields, one per time step
+        fiber direction angle field
+        list of corresponding states (disp. + pressure)
+        list of values of interest tracked in the optimization process
 
     """
 
@@ -522,6 +544,21 @@ def solve_iteratively(
     number_of_iterations: int,
     output_folder: str | None,
 ) -> tuple[list[da.Function], list[da.Function], list[da.Function]]:
+    """
+
+    Args:
+        geometry: mesh + ds for pillars
+        u_data: list of functions for original displacement
+        number_of_iterations: number of iterations for the min. problem
+        output_folder: save results here
+
+    Returns:
+        list of active strain fields, per time step
+        fiber direction angle field
+        corresponding states (disp. and pressure) 
+
+    """
+
     num_time_steps = len(u_data)
     heap = sort_data_after_displacement(u_data)
 
@@ -602,7 +639,7 @@ def solve_iteratively(
             output_folder,
         )
 
-    states_over_time2: list[da.Function] = []
+    states_over_time2 = []
     # make sure initial guesses will converge in phase 2
     theta = df.project(theta, U)
 

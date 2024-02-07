@@ -12,7 +12,7 @@ import heapq
 import numpy as np
 import dolfin as df
 import dolfin_adjoint as da
-import ufl
+import ufl_legacy as ufl
 
 from .nonlinearproblem import NonlinearProblem
 from .mesh_setup import Geometry

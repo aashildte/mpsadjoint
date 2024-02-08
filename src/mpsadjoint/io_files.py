@@ -10,7 +10,7 @@ checkpointing in Phase 1.
 
 import os
 import typing
-import ufl
+import ufl_legacy as ufl
 import dolfin as df
 import dolfin_adjoint as da
 
@@ -251,7 +251,7 @@ def write_strain_to_file(
     Writes strain values to file
 
     Args:
-        T - underlying function space
+        T - underlying function space (e.g. CG-2 or DG-2)
         strain_vlaues - list of functions, one per time step
         filename - save here
 

@@ -25,7 +25,8 @@ def load_mesh_h5(
     """
     
     Function for loading pre-constructed mesh from h5 file. This mesh should
-    match the tissue shape and is expected to have pillars defined as a meshfunction.
+    match the tissue shape and is expected to have a meshfunction defining
+    the pillars.
 
     Args:
         filename - path to mesh file

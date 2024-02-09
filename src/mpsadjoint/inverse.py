@@ -160,9 +160,9 @@ def eval_cb_checkpoint(
 
 def initiate_controls(
     mesh: da.Mesh,
-    init_active_strain: list[da.Function],
-    init_theta: da.Function,
-):
+    init_active_strain: list[da.Function] | list[da.Constant],
+    init_theta: da.Function | da.Constant,
+) -> tuple[list[da.Function], da.Function]:
     """
 
     Initiates variables for active strain + theta, given initial guesses.
@@ -269,9 +269,8 @@ def define_optimization_problem(
         control variables: list of da.Function objects, to be optimized
 
     Returns:
-        tuple:
-            optimization (minimization) problem and tracked_values which
-            is a lists of cost function and average values, to be
+        optimization (minimization) problem
+        a lists of cost function and average values, to be
             updated after every acceptable successful iteration
 
     """
@@ -307,7 +306,7 @@ def define_optimization_problem(
 
 
 def solve_optimization_problem(
-    problem: da.MinimazationProblem, maximum_iterations: int
+    problem: da.MinimizationProblem, maximum_iterations: int
 ) -> list[da.Function]:
     """
 
@@ -672,7 +671,7 @@ def solve_inverse_problem(
     output_folder: str | None = None,
     number_of_iterations_iterative: int = 100,
     number_of_iterations_combined: int = 100,
-):
+) -> tuple[list[da.Function], da.Function, list[da.Function]]:
     """
 
     Main function; we'll run everything from here.
@@ -691,6 +690,8 @@ def solve_inverse_problem(
             for active strain, for each time step
         theta: da.function object, contains optimized values for the fiber
             direction (as an angle), for all time steps altogether
+        states: list of corresponding states (disp. + pressure), solutions
+            based on active strain and theta values
 
     """
 
@@ -766,7 +767,35 @@ def solve_inverse_problem_phase_3(
     number_of_iterations_iterative: int = 100,
     number_of_iterations_combined: int = 100,
     number_of_iterations: int = 100,
-):
+) -> tuple[list[da.Function], da.Function, list[da.Function]]:
+    """
+
+    Main function for the third phase inversion.
+
+    Args:
+        geometry: namedtuple Geometry with mesh and surface information
+        u_data: list of lists of displacement data for all time points
+            (so one list per drug dose)
+        folders: list of folders where data from phase 2 is saved; results
+            will also be saved here (if provided)
+        number_of_iterations_iterative: integer, number of iterations used in
+            the first phase (will be used to read in correct data)
+        number_of_iterations_combined: integer, number of iterations used in
+            the second phase (will be used to read in correct data)
+        number_of_iterations: integer; number of iterations to use for
+            optimizing all time steps combined into one optimization problem
+            (in the third phase)
+
+    Returns:
+        active_strain: list of da.Function objects, contains optimized values
+            for active strain, for each time step
+        theta: da.function object, contains optimized values for the fiber
+            direction (as an angle), for all time steps altogether
+        states: list of corresponding states (disp. + pressure), solutions
+            based on active strain and theta values
+
+    """
+
     active_all = []
     states_all = []
     u_data_all = []

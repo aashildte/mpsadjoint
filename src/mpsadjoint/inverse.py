@@ -12,7 +12,6 @@ import heapq
 import numpy as np
 import dolfin as df
 import dolfin_adjoint as da
-import ufl_legacy as ufl
 
 from .nonlinearproblem import NonlinearProblem
 from .mesh_setup import Geometry
@@ -807,7 +806,8 @@ def solve_inverse_problem_phase_3(
     T = len(u_data[0])
 
     for folder, u_d in zip(folders, u_data):
-        data_path = f"{folder}/combined_{number_of_iterations_iterative}_{number_of_iterations_combined}"
+        data_path = f"{folder}/combined_{number_of_iterations_iterative}\
+                        _{number_of_iterations_combined}"
 
         assert data_exist(
             data_path

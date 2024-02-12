@@ -11,7 +11,14 @@ import dolfin_adjoint as da
 from scipy.interpolate import RegularGridInterpolator
 from types import FunctionType
 
-def mps_to_fenics(mps_data: np.array, mps_info: dict[str, float], mesh: da.Mesh, time_start: int, time_stop: int) -> list[da.Function]:
+
+def mps_to_fenics(
+    mps_data: np.array,
+    mps_info: dict[str, float],
+    mesh: da.Mesh,
+    time_start: int,
+    time_stop: int,
+) -> list[da.Function]:
     """
 
     Function that maps displacement data, as given per pixel, to a Fenics function space.
@@ -56,7 +63,9 @@ def mps_to_fenics(mps_data: np.array, mps_info: dict[str, float], mesh: da.Mesh,
     return u_data
 
 
-def define_value_ranges(mps_data: np.array, mps_info: dict[str, float]) -> tuple[np.array, np.array]:
+def define_value_ranges(
+    mps_data: np.array, mps_info: dict[str, float]
+) -> tuple[np.array, np.array]:
     """
 
     Defines x and y coordinates based on info about dimensions and number of points in disp. array.
@@ -83,19 +92,25 @@ def define_value_ranges(mps_data: np.array, mps_info: dict[str, float]) -> tuple
     return xvalues, yvalues
 
 
-def mps_interpolation(mps_data: np.array, xvalues: np.array, yvalues: np.array) -> FunctionType:
+def mps_interpolation(
+    mps_data: np.array, xvalues: np.array, yvalues: np.array
+) -> FunctionType:
     """
 
-    Defines an interpolation function, preparing for mapping all mesh points based on disp. values.
+    Defines an interpolation function, preparing for mapping all
+    mesh points based on disp. values.
 
     Args:
         mps_data: array defining relative displacement values
-        x_values: numpy array defining all x values (in µm) per pixel in the longitudinal direction
-        y_values: numpy array defining all y values (in µm) per pixel in the transverse direction
+        x_values: numpy array defining all x values (in µm),
+                    per pixel in the longitudinal direction
+        y_values: numpy array defining all y values (in µm),
+                    per pixel in the transverse direction
     
     Returns:
-        a function: R2 -> R2, taking in x and y coordinates and returning interpolated
-            relative displacement for given point along x and y directions
+        a function: R2 -> R2, taking in x and y coordinates and
+            returning interpolated relative displacement for
+            given point along x and y directions
 
     """
     ip_x = RegularGridInterpolator(

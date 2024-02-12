@@ -1,7 +1,6 @@
 from mpsadjoint.cardiac_mechanics import fiber_direction
 import pytest
 import numpy as np
-import ufl
 import dolfin as df
 
 

@@ -807,10 +807,7 @@ def solve_inverse_problem_phase_3(
     T = len(u_data[0])
 
     for folder, u_d in zip(folders, u_data):
-        data_path = (
-            folder
-            + f"/combined_{number_of_iterations_iterative}_{number_of_iterations_combined}"
-        )
+        data_path = f"{folder}/combined_{number_of_iterations_iterative}_{number_of_iterations_combined}"
 
         assert data_exist(
             data_path
@@ -829,7 +826,8 @@ def solve_inverse_problem_phase_3(
         u_data_all
     ), "Error: Active / states / data do not have the same length."
 
-    # define average theta value
+    # define average theta value from the different drug doses as an initial guess
+    # to the final optimization phase
     theta_avg = df.Function(U, name="Theta")
 
     theta_sum = 0
@@ -837,7 +835,7 @@ def solve_inverse_problem_phase_3(
         theta_sum += theta
 
     theta_avg.assign(df.project(theta_sum / len(theta_all), U))
-    # syncronizing theta values iterative-recursively
+    # syncronizing theta values iterative (recursively for convergence)
 
     states_all_syncronized = []
 

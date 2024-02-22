@@ -4,13 +4,19 @@ Files for saving function values to / reading function values from files.
 These are used for saving values as output, but also used as a part of
 checkpointing in Phase 1.
 
-Åshild Telle / Simula Research Laboratory / 2023
+Åshild Telle / Simula Research Laboratory / 2024
 
 """
 
 import os
 import typing
-import ufl_legacy as ufl
+
+# import ufl (new/old version of fenics)
+try:
+    import ufl_legacy as ufl
+except ImportError:
+    import ufl
+
 import dolfin as df
 import dolfin_adjoint as da
 

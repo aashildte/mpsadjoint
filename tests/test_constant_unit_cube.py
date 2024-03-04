@@ -50,7 +50,7 @@ def test_constant_multistep():
     # generate synthetic data
     TH, bcs, geometry = setup_mesh_funspaces()
 
-    active = da.Constant(0.03)
+    active = da.Constant(0.01)
     theta = da.Constant(0.0)
 
     # generate synthetic data
@@ -60,7 +60,7 @@ def test_constant_multistep():
 
     synthetic_data = []
     # increase active gradually
-    for value in [0.06, 0.08, 0.1, 0.12]:
+    for value in [0.03, 0.06, 0.08, 0.1, 0.12]:
         active.assign(value)
         solve_forward_problem(R, state, bcs)
 
@@ -107,12 +107,12 @@ def test_constant():
     active_avg = df.assemble(active_m[0] * df.dx) / df.assemble(
         da.Constant(1) * df.dx(geometry.mesh)
     )
-    
+    print("active_avg: ", active_avg)    
     assert math.isclose(
         active_avg, active, abs_tol=0.001
     ), "Error: Could not solve constant problem"
 
 
 if __name__ == "__main__":
-    test_constant()
     test_constant_multistep()
+    test_constant()

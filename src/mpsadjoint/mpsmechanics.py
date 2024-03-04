@@ -14,7 +14,7 @@ from types import FunctionType
 
 def mps_to_fenics(
     mps_data: np.array,
-    mps_info: dict[str, float],
+    um_per_pixel : float,
     mesh: da.Mesh,
     time_start: int,
     time_stop: int,
@@ -24,12 +24,13 @@ def mps_to_fenics(
     Function that maps displacement data, as given per pixel, to a Fenics function space.
 
     Args:
-        mps_data: numpy array of dimensions T x X x Y, where T is the number of time steps,
-            X the longitudinal dimension (# blocks), and Y the transverse dimension
-        mps_info: dictionary with key information about dimensions in micrometers
+        mps_data: numpy array of dimensions T x X x Y x 2, where T is the number of time steps,
+            X the longitudinal dimension (# blocks), and Y the transverse dimension. The final
+            values are displacement in x direction (0th comp) and y direction (1nd comp).
+        um_per_pixel: convertion from pixels to um (set to 1 if mps data is in um)
         mesh: geometrical domain, fenics mesh
-        time_start: time point to read FROM, can be 0 or higher
-        time_stop: time point to read TO, can be length of mps_data[0] or lower
+        time_start: time point to read FROM, [0–len(mps_data)]
+        time_stop: time point to read TO, [0–len(mps_data)]
 
     Returns:
         list of displacement data functions, one field per time step
@@ -39,11 +40,11 @@ def mps_to_fenics(
     V2 = df.VectorFunctionSpace(mesh, "CG", 2)
 
     v_d = V2.dofmap().dofs()
-    mesh_coords = V2.tabulate_dof_coordinates()[::2]
+    mesh_coords = V2.tabulate_dof_coordinates()[::2]  # 2 in 2D, 3 in 3D
 
     u_data = []
 
-    xcoords, ycoords = define_value_ranges(mps_data, mps_info)
+    xcoords, ycoords = define_value_ranges(mps_data, um_per_pixel)
 
     mesh_xcoords = mesh_coords[:, 0]
     mesh_ycoords = mesh_coords[:, 1]
@@ -64,22 +65,22 @@ def mps_to_fenics(
 
 
 def define_value_ranges(
-    mps_data: np.array, mps_info: dict[str, float]
+        mps_data: np.array,
+        um_per_pixel : float,
 ) -> tuple[np.array, np.array]:
     """
 
     Defines x and y coordinates based on info about dimensions and number of points in disp. array.
 
     Args:
-        mps_data: array defining relative displacement values
-        mps_info: dictionary with dimension values
+        mps_data: array defining relative displacement values (expected to be pixel values)
+        um_per_pixel: convertion from pixels to um (set to 1 if mps data is in um)
 
     Returns:
         numpy array defining all x values (in µm) per pixel in the longitudinal direction
         numpy array defining all y values (in µm) per pixel in the transverse direction
 
     """
-    um_per_pixel = mps_info["um_per_pixel"]
 
     _, X, Y, _ = mps_data.shape
 

@@ -536,13 +536,21 @@ def load_data(output_folder, U, TH, num_time_steps):
     return active, theta, states
 
 
-def solve_iteratively(
+def solve_inverse_problem_phase1(
     geometry: Geometry,
     u_data: list[da.Function],
-    number_of_iterations: int,
-    output_folder: str | None,
+    number_of_iterations: int = 100,
+    output_folder: str = None,
 ) -> tuple[list[da.Function], list[da.Function], list[da.Function]]:
     """
+
+    Solves the inverse problem for phase 1, i.e., for each time step
+    and for each drug dose, as applicable. This is done in order of magnitude,
+    as in, we first sort the time steps according to magntiude of displacement,
+    and then use the solution of each of those as input to the next in order.
+
+    Values are written to file (useful for checkpointing) as weil as returned
+    (useful for running a combined script).
 
     Args:
         geometry: mesh + ds for pillars
@@ -627,7 +635,7 @@ def solve_iteratively(
             active_strain[0], U
         )
         states_over_time[time_step] = states[0]
-
+    
     if output_folder is not None and not data_exist(output_folder):
         write_inversion_results(
             geometry.mesh,
@@ -638,8 +646,8 @@ def solve_iteratively(
         )
 
     states_over_time2 = []
-    # make sure initial guesses will converge in phase 2
-    theta = df.project(theta, U)
+
+    # solve forward problems: make sure initial guesses will converge in phase 2
 
     for t, (active, theta_t, state) in enumerate(
         zip(active_strain_over_time, theta_over_time, states_over_time)
@@ -661,10 +669,10 @@ def solve_iteratively(
         )
         states_over_time2.append(state)
 
-    return active_strain_over_time, theta, states_over_time2
+    return active_strain_over_time, theta_over_time, states_over_time2
 
 
-def solve_inverse_problem(
+def solve_inverse_problem_phase2(
     geometry: Geometry,
     u_data: list[da.Function],
     output_folder: str | None = None,

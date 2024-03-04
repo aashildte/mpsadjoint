@@ -6,6 +6,8 @@ from . import motiontracking
 from . import mpsmechanics
 from . import nonlinearproblem
 
+from .inverse import solve_inverse_problem_phase1
+
 __all__ = [
     "cardiac_mechanics",
     "inverse",

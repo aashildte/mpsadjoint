@@ -1,7 +1,7 @@
 """
 
 Script for doing the first phase of inversion, i.e., with one individual
-inversion per time step.
+inversion per time step (and per drug dose, if applicable).
 
 This script runs the process "serially" by using solution from previous
 steps as initial guesses to next steps.
@@ -13,10 +13,9 @@ zero guesses will always be initial guesses.
 """
 
 import os
+from argparse import ArgumentParser
 import numpy as np
 import dolfin as df
-from argparse import ArgumentParser
-import mps  # depends on this for getting units
 
 from mpsadjoint.mpsmechanics import mps_to_fenics
 from mpsadjoint.mesh_setup import load_mesh_h5
@@ -48,7 +47,7 @@ def parse_cl_arguments():
     )
 
     parser.add_argument(
-        "--num_iterations",
+        "--num_iterations_phase1",
         type=int,
         default=100,
         help="How many iterations to use solving the inverse problem (phase 1)",
@@ -97,7 +96,7 @@ def parse_cl_arguments():
         d.from_step,
         d.to_step,
         d.step_length,
-        d.num_iterations,
+        d.num_iterations_phase1,
         d.output_folder,
         d.idt,
         d.displacement_file,
@@ -110,7 +109,7 @@ def parse_cl_arguments():
     from_step,
     to_step,
     step_length,
-    num_iterations,
+    num_iterations_phase1,
     output_folder,
     study_id,
     displacement_file,
@@ -125,14 +124,17 @@ geometry = load_mesh_h5(mesh_file)
 # convert displacement data to Fenics functions
 
 displacement_data = np.load(displacement_file)
-print(displacement_data.shape)
 u_data = mps_to_fenics(
     displacement_data, um_per_pixel, geometry.mesh, from_step, to_step
 )[::step_length]
 
+# recommended: keep time as int values, even if that doesn't match your unit;
+# this makes paths easier to read to/from
+time = np.arange(from_step, to_step, step_length, type=np.int32)
+
 # save data here
 
-output_folder = f"results/{study_id}/step_{from_step}_{to_step}_{step_length}_msh_{mesh_file}"
+output_folder = f"results/{study_id}"
 
 # write original data to file (this is just for comparison; this step can be skipped)
 filename_displacement = f"{output_folder}/displacement_original.xdmf"
@@ -156,5 +158,5 @@ if not os.path.isfile(filename_strain):
 
 # solve the inverse problem
 solve_inverse_problem_phase1(
-    geometry, u_data, num_iterations, output_folder,
+    geometry, u_data, time, num_iterations_phase1, output_folder,
 )

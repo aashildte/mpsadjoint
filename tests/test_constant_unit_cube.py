@@ -59,18 +59,19 @@ def test_constant_multistep():
     solve_forward_problem(R, state, bcs)
 
     synthetic_data = []
+    time = []
     # increase active gradually
-    for value in [0.03, 0.06, 0.08, 0.1, 0.12]:
+    for t, value in enumerate([0.03, 0.06, 0.08, 0.1, 0.12]):
         active.assign(value)
         solve_forward_problem(R, state, bcs)
 
         u_synthetic, _ = state.split()
         synthetic_data.append(u_synthetic)
-
+        time.append(t)
     # then solve the inverse problem
     
     active_m, _, _ = solve_inverse_problem_phase1(
-        geometry=geometry, u_data=synthetic_data,
+        geometry=geometry, u_data=synthetic_data, time=time
     )
 
     active_avg = df.assemble(active_m[-1] * df.dx) / df.assemble(
@@ -101,7 +102,7 @@ def test_constant():
     # then consider the inverse problem
 
     active_m, _, _ = solve_inverse_problem_phase1(
-        geometry=geometry, u_data=[u_synthetic]
+        geometry=geometry, u_data=[u_synthetic], time=[0],
     )
 
     active_avg = df.assemble(active_m[0] * df.dx) / df.assemble(

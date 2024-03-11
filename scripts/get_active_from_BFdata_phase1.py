@@ -129,8 +129,10 @@ u_data = mps_to_fenics(
 )[::step_length]
 
 # save data here
+if study_id != "":
+    output_folder += "/" + study_id
 
-output_folder = f"results/{study_id}"
+output_folder = f"{output_folder}/phase1"
 
 # write original data to file (this is just for comparison; this step can be skipped)
 filename_displacement = f"{output_folder}/displacement_original.xdmf"

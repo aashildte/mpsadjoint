@@ -1,3 +1,11 @@
+"""
+
+Åshild Telle / Simula Research Laboratory / 2024
+
+"""
+
+
+
 import dolfin as df
 import dolfin_adjoint as da
 

@@ -2,7 +2,7 @@
 
 Code for solving the inverse problem; optimization part. Core part of the code.
 
-Åshild Telle, Henrik Finsberg // Simula Research Laboratory // 2024
+Åshild Telle, Henrik Finsberg / Simula Research Laboratory / 2024
 
 """
 
@@ -653,12 +653,12 @@ def solve_inverse_problem_phase2(
     Args:
         geometry: namedtuple Geometry with mesh and surface information
         u_data: list of displacement data for all time points
+        number_of_iteration: integer; number of iterations to use
+            for optimizing all time steps combined into one optimization problem
         input_folder: results from phase 1 are assumed to be saved here;
             if None, we will go straight into phase 2 (zero-valued
             initial guesses assumed)
         output_folder: results will be saved here (if provided)
-        number_of_iteration: integer; number of iterations to use
-            for optimizing all time steps combined into one optimization problem
 
     Returns:
         active_strain: list of da.Function objects, contains optimized values
@@ -752,7 +752,7 @@ def solve_inverse_problem_phase2(
             states,
             output_folder,
         )
-
+       
         write_inversion_statistics(
             tracked_quantities,
             output_folder
@@ -761,13 +761,12 @@ def solve_inverse_problem_phase2(
     return active_strain, theta, states
 
 
-def solve_inverse_problem_phase_3(
+def solve_inverse_problem_phase3(
     geometry: Geometry,
     u_data: list[da.Function],
-    folders: list[str],
-    number_of_iterations_iterative: int = 100,
-    number_of_iterations_combined: int = 100,
     number_of_iterations: int = 100,
+    input_folders: list[str] | None=None,
+    output_folders: list[str] | None=None,
 ) -> tuple[list[da.Function], da.Function, list[da.Function]]:
     """
 
@@ -777,15 +776,12 @@ def solve_inverse_problem_phase_3(
         geometry: namedtuple Geometry with mesh and surface information
         u_data: list of lists of displacement data for all time points
             (so one list per drug dose)
-        folders: list of folders where data from phase 2 is saved; results
-            will also be saved here (if provided)
-        number_of_iterations_iterative: integer, number of iterations used in
-            the first phase (will be used to read in correct data)
-        number_of_iterations_combined: integer, number of iterations used in
-            the second phase (will be used to read in correct data)
-        number_of_iterations: integer; number of iterations to use for
-            optimizing all time steps combined into one optimization problem
-            (in the third phase)
+        number_of_iteration: integer; number of iterations to use
+            for optimizing all time steps combined into one optimization problem
+        input_folders: results from phase 1 are assumed to be saved here,
+            in a folder structure matching the folder structure for u_data
+        output_folder: results will be saved here (if provided),
+            in a folder structure matching the folder structure for u_data
 
     Returns:
         active_strain: list of da.Function objects, contains optimized values
@@ -807,21 +803,28 @@ def solve_inverse_problem_phase_3(
 
     T = len(u_data[0])
 
-    for folder, u_d in zip(folders, u_data):
-        data_path = f"{folder}/combined_{number_of_iterations_iterative}\
-                        _{number_of_iterations_combined}"
+    if input_folders is not None:
+        for folder in input_folders:
+            assert data_exist(
+                folder
+            ), f"Error: Data in folder {folder} do not exist."
+            print(folder, len(u_data[0]))
+            active_strain, theta, states = load_data(
+                folder, U, TH, len(u_data[0])
+            )
 
-        assert data_exist(
-            data_path
-        ), f"Error: Data in folder {data_path} do not exist."
+            active_all += active_strain
+            states_all += states
+            theta_all.append(theta)
+    else:
+        N = len(u_data)*len(u_data[0])
+        active_over_time = [da.Function(U, name="Active strain")]*N
+        states = [da.Function(TH)]*N
+        theta = da.Function(U, name="Theta")
 
-        active_strain, theta, states = load_data(
-            data_path, U, TH, len(u_data[0])
-        )
-
-        active_all += active_strain
-        states_all += states
-        theta_all.append(theta)
+    for u_d in u_data:
+        # this is technically not so important, but the code assumes this to be true:
+        assert len(u_d) == len(u_data[0]), "Error: number of time steps per dose needs to be the same!"
         u_data_all += u_d
 
     assert len(active_all) == len(states_all) and len(active_all) == len(
@@ -884,24 +887,20 @@ def solve_inverse_problem_phase_3(
         number_of_iterations,
     )
 
-    for i, output_folder in enumerate(folders):
+    for i, output_folder in enumerate(output_folders):
         active_strain_per_dose = active_all[i * T : (i + 1) * T]
         states_per_dose = states[i * T : (i + 1) * T]
-        name = (
-            f"/combined_phase3_{number_of_iterations_iterative}_"
-            f"{number_of_iterations_combined}_{number_of_iterations}"
-        )
 
         write_inversion_results(
             geometry.mesh,
             active_strain_per_dose,
             theta,
             states_per_dose,
-            output_folder + name,
+            output_folder,
         )
 
         write_inversion_statistics(
-            tracked_quantities, output_folder + name
+            tracked_quantities, output_folder
         )
 
     return active_all, theta, states_all

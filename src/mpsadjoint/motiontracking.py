@@ -4,6 +4,7 @@ You need to install the following dependencies
 python3 -m pip install opencv-python dask[array,diagnostics] numpy
 
 You also need the `mps` package for reading the data
+
 """
 import cv2
 import numpy as np

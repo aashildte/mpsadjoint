@@ -1,8 +1,8 @@
 """
 
-Åshild Telle / Simula Research Laboratory / 2022
-
 Loads mesh + boundary condition surfaces for the pillars (in which Robin BCs will be applied).
+
+Åshild Telle / Simula Research Laboratory / 2024
 
 """
 

@@ -1,14 +1,32 @@
-import os
-import numpy as np
-from argparse import ArgumentParser
+"""
 
-# import mps                            # depends on this for getting units
+Script for doing the first phase of inversion, i.e., with one individual
+inversion for all time steps AND for all drug doses.
+
+This script relies on that the _phase1+phase2 scripts has been run first, and
+the following parameters need to match those given for that phase:
+    output_folder
+    idt
+    from_step
+    to_step
+    step_length
+We'll read values in from file based on these parameters.
+
+"""
+
+import os
+from argparse import ArgumentParser
+import numpy as np
+import dolfin as df
 
 from mpsadjoint.mpsmechanics import mps_to_fenics
 from mpsadjoint.mesh_setup import load_mesh_h5
 from mpsadjoint.cardiac_mechanics import set_fenics_parameters
-from mpsadjoint.inverse import solve_inverse_problem_phase_3
-
+from mpsadjoint.inverse import solve_inverse_problem_phase3
+from mpsadjoint.io_files import (
+    write_displacement_to_file,
+    write_strain_to_file,
+)
 
 set_fenics_parameters()
 
@@ -17,16 +35,10 @@ def parse_cl_arguments():
     parser = ArgumentParser()
 
     parser.add_argument(
-        "--from_step",
-        type=int,
-        default=243,
-        help="Starting time step",
+        "--from_step", type=int, default=43, help="Starting time step"
     )
     parser.add_argument(
-        "--to_step",
-        type=int,
-        default=244,
-        help="Final time step",
+        "--to_step", type=int, default=44, help="Final time step"
     )
 
     parser.add_argument(
@@ -37,31 +49,49 @@ def parse_cl_arguments():
     )
 
     parser.add_argument(
-        "--num_iterations_phase1",
+        "--num_iterations",
         type=int,
         default=100,
-        help="How many iterations used to use solving the inverse problem in phase 1",
+        help="How many iterations to use solving the inverse problem in this problem (phase 3)",
     )
 
-    parser.add_argument(
-        "--num_iterations_phase2",
-        type=int,
-        default=100,
-        help="How many iterations used to use solving the inverse problem in phase 2",
-    )
 
     parser.add_argument(
-        "--num_iterations_phase3",
-        type=int,
-        default=100,
-        help="How many iterations to use solving the inverse problem in phase 3",
-    )
-
-    parser.add_argument(
-        "--mesh_res",
+        "--output_folder",
         type=str,
-        default="0p5",
-        help="mesh resolution",
+        default="results",
+        help="Where to save the results (main folder); if set to None, the results will not be saved.",
+    )
+
+    parser.add_argument(
+        "--idts",
+        nargs="+",
+        type=str,
+        required=True,
+        help="Where to save the results (subfolder names; NOT optional); as a list - length should match displacement_files",
+    )
+
+    parser.add_argument(
+        "--displacement_files",
+        nargs="+",
+        type=str,
+        required=True,
+        help="Displacement data; all files with displacement data over time and space - length should match idts.",
+    )
+
+    parser.add_argument(
+        "--mesh_file",
+        type=str,
+        default="",
+        required=True,
+        help="Mesh file; mesh corresponding to experiment to do the inversion for.",
+    )
+
+    parser.add_argument(
+        "--um_per_pixel",
+        type=float,
+        default=1.3552,
+        help="Unit conversion parameter; length of each pixel in µm",
     )
 
     d = parser.parse_args()
@@ -70,10 +100,12 @@ def parse_cl_arguments():
         d.from_step,
         d.to_step,
         d.step_length,
-        d.num_iterations_phase1,
-        d.num_iterations_phase2,
-        d.num_iterations_phase3,
-        d.mesh_res,
+        d.num_iterations,
+        d.output_folder,
+        d.idts,
+        d.displacement_files,
+        d.mesh_file,
+        d.um_per_pixel,
     )
 
 
@@ -81,41 +113,39 @@ def parse_cl_arguments():
     from_step,
     to_step,
     step_length,
-    num_iterations_ph1,
-    num_iterations_ph2,
-    num_iterations_ph3,
-    mesh_res,
+    num_iterations,
+    output_folder,
+    study_idts,
+    displacement_files,
+    mesh_file,
+    um_per_pixel,
 ) = parse_cl_arguments()
 
-# load mesh; specific for a given design
-mesh_file = os.path.join("meshes4", f"chip_bayK_clmax_{mesh_res}.h5")
+print(displacement_files)
+print(study_idts)
+assert len(displacement_files) == len(study_idts), "Error: Please provide one displacement file per study idt."
+
+# load mesh; specific for a given design (including pillar configuration)
 geometry = load_mesh_h5(mesh_file)
 
-folders = []
+# convert displacement data to Fenics functions
 u_data_all = []
-doses = ["Control", "10nM", "100nM", "1000nM"]
-
-for dose in doses:
-    displacement_file = (
-        "experiments/AshildData/20211126_bayK_chipB/"
-        f"{dose}/20211126-GCaMP80HCF20-BayK_Stream_B01_s1_TL-20_displacement_avg_beat.npy"
-    )
-    # load data from mechanical analysis; specific for corresponding experiment
-    mps_data = np.load(displacement_file)
-    mps_info = {"um_per_pixel": 1.3552}
-
-    u_data = mps_to_fenics(mps_data, mps_info, geometry.mesh, from_step, to_step)[::step_length]
+for displacement_file in displacement_files:
+    displacement_data = np.load(displacement_file)
+    u_data = mps_to_fenics(
+        displacement_data, um_per_pixel, geometry.mesh, from_step, to_step
+    )[::step_length]
     u_data_all.append(u_data)
 
-    folder = f"new_results/step_{from_step}_{to_step}_{step_length}_bayK_{dose}_msh_{mesh_res}"
-    folders.append(folder)
+# get initial guesses from phase 1; save output data here after phase 2
+init_folders = []
+output_folders = []
 
+for study_id in study_idts:
+    init_folders.append(f"{output_folder}/{study_id}/phase2")
+    output_folders.append(f"{output_folder}/{study_id}/phase3")
 
-solve_inverse_problem_phase_3(
-    geometry,
-    u_data_all,
-    folders,
-    num_iterations_ph1,
-    num_iterations_ph2,
-    num_iterations_ph3,
+# solve the inverse problem in phase 3
+solve_inverse_problem_phase3(
+    geometry, u_data_all, num_iterations, init_folders, output_folders
 )

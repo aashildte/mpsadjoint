@@ -37,9 +37,8 @@ then the optimization software Cyipopt (as described [here](https://cyipopt.read
 conda install -c conda-forge cyipopt
 ```
 
-## Steps to reproduce results
-
-TBW
+## Scripts
+The scripts folder contains script for the synthetic data and for running inversions in the three phases with brightfield data as input, which should be done in order.
 
 ## Documentation
 See http://aashildte.github.io/mpsadjoint

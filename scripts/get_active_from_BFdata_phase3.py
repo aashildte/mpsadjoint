@@ -14,19 +14,13 @@ We'll read values in from file based on these parameters.
 
 """
 
-import os
 from argparse import ArgumentParser
 import numpy as np
-import dolfin as df
 
 from mpsadjoint.mpsmechanics import mps_to_fenics
 from mpsadjoint.mesh_setup import load_mesh_h5
 from mpsadjoint.cardiac_mechanics import set_fenics_parameters
 from mpsadjoint.inverse import solve_inverse_problem_phase3
-from mpsadjoint.io_files import (
-    write_displacement_to_file,
-    write_strain_to_file,
-)
 
 set_fenics_parameters()
 
@@ -34,12 +28,8 @@ set_fenics_parameters()
 def parse_cl_arguments():
     parser = ArgumentParser()
 
-    parser.add_argument(
-        "--from_step", type=int, default=43, help="Starting time step"
-    )
-    parser.add_argument(
-        "--to_step", type=int, default=44, help="Final time step"
-    )
+    parser.add_argument("--from_step", type=int, default=43, help="Starting time step")
+    parser.add_argument("--to_step", type=int, default=44, help="Final time step")
 
     parser.add_argument(
         "--step_length",
@@ -55,12 +45,14 @@ def parse_cl_arguments():
         help="How many iterations to use solving the inverse problem in this problem (phase 3)",
     )
 
-
     parser.add_argument(
         "--output_folder",
         type=str,
         default="results",
-        help="Where to save the results (main folder); if set to None, the results will not be saved.",
+        help=(
+            "Where to save the results (main folder); "
+            "if set to None, the results will not be saved."
+        ),
     )
 
     parser.add_argument(
@@ -68,7 +60,10 @@ def parse_cl_arguments():
         nargs="+",
         type=str,
         required=True,
-        help="Where to save the results (subfolder names; NOT optional); as a list - length should match displacement_files",
+        help=(
+            "Where to save the results (subfolder names; NOT optional); "
+            "as a list - length should match displacement_files"
+        ),
     )
 
     parser.add_argument(
@@ -76,7 +71,10 @@ def parse_cl_arguments():
         nargs="+",
         type=str,
         required=True,
-        help="Displacement data; all files with displacement data over time and space - length should match idts.",
+        help=(
+            "Displacement data; all files with displacement data over time "
+            "and space - length should match idts."
+        ),
     )
 
     parser.add_argument(
@@ -123,7 +121,9 @@ def parse_cl_arguments():
 
 print(displacement_files)
 print(study_idts)
-assert len(displacement_files) == len(study_idts), "Error: Please provide one displacement file per study idt."
+assert len(displacement_files) == len(
+    study_idts
+), "Error: Please provide one displacement file per study idt."
 
 # load mesh; specific for a given design (including pillar configuration)
 geometry = load_mesh_h5(mesh_file)
@@ -132,9 +132,9 @@ geometry = load_mesh_h5(mesh_file)
 u_data_all = []
 for displacement_file in displacement_files:
     displacement_data = np.load(displacement_file)
-    u_data = mps_to_fenics(
-        displacement_data, um_per_pixel, geometry.mesh, from_step, to_step
-    )[::step_length]
+    u_data = mps_to_fenics(displacement_data, um_per_pixel, geometry.mesh, from_step, to_step)[
+        ::step_length
+    ]
     u_data_all.append(u_data)
 
 # get initial guesses from phase 1; save output data here after phase 2
@@ -146,6 +146,4 @@ for study_id in study_idts:
     output_folders.append(f"{output_folder}/{study_id}/phase3")
 
 # solve the inverse problem in phase 3
-solve_inverse_problem_phase3(
-    geometry, u_data_all, num_iterations, init_folders, output_folders
-)
+solve_inverse_problem_phase3(geometry, u_data_all, num_iterations, init_folders, output_folders)

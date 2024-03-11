@@ -4,12 +4,11 @@
 
 """
 
-
+from typing import Callable
 import numpy as np
 import dolfin as df
 import dolfin_adjoint as da
 from scipy.interpolate import RegularGridInterpolator
-from types import FunctionType
 
 
 def mps_to_fenics(
@@ -40,9 +39,7 @@ def mps_to_fenics(
     V2 = df.VectorFunctionSpace(mesh, "CG", 2)
 
     v_d = V2.dofmap().dofs()
-    mesh_coords = V2.tabulate_dof_coordinates()[
-        ::2
-    ]  # 2 in 2D, 3 in 3D
+    mesh_coords = V2.tabulate_dof_coordinates()[::2]  # 2 in 2D, 3 in 3D
 
     u_data = []
 
@@ -58,17 +55,13 @@ def mps_to_fenics(
 
         xvalues, yvalues = ip_fun(mesh_xcoords, mesh_ycoords)
 
-        u.vector()[v_d] = (
-            np.array((xvalues, yvalues)).transpose().flatten()
-        )
+        u.vector()[v_d] = np.array((xvalues, yvalues)).transpose().flatten()
         u_data.append(u)
 
     return u_data
 
 
-def define_value_ranges(
-    mps_data: np.array, um_per_pixel: float
-) -> tuple[np.array, np.array]:
+def define_value_ranges(mps_data: np.array, um_per_pixel: float) -> tuple[np.array, np.array]:
     """
 
     Defines x and y coordinates based on info about dimensions and number of points in disp. array.
@@ -96,7 +89,7 @@ def define_value_ranges(
 
 def mps_interpolation(
     mps_data: np.array, xvalues: np.array, yvalues: np.array
-) -> FunctionType:
+) -> Callable[[float, float], np.array]:
     """
 
     Defines an interpolation function, preparing for mapping all
@@ -108,7 +101,7 @@ def mps_interpolation(
                     per pixel in the longitudinal direction
         y_values: numpy array defining all y values (in µm),
                     per pixel in the transverse direction
-    
+
     Returns:
         a function: R2 -> R2, taking in x and y coordinates and
             returning interpolated relative displacement for
@@ -129,6 +122,4 @@ def mps_interpolation(
         fill_value=0,
     )
 
-    ip_fun = lambda x, y: np.array((ip_x((x, y)), ip_y((x, y))))
-
-    return ip_fun
+    return lambda x, y: np.array((ip_x((x, y)), ip_y((x, y))))

@@ -81,9 +81,6 @@ files = ["src/mpsadjoint", "tests"]
 ignore_missing_imports = true
 exclude = "docs"
 
-[tool.coverage.run]
-omit = ["src/mpsadjoint/__main__.py"]
-
 
 [tool.ruff]
 # Enable pycodestyle (`E`) and Pyflakes (`F`) codes by default.

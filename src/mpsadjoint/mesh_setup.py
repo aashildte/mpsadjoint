@@ -24,7 +24,7 @@ def load_mesh_h5(
     save_pvd_file: bool = False,
 ) -> Geometry:
     """
-    
+
     Function for loading pre-constructed mesh from h5 file. This mesh should
     match the tissue shape and is expected to have a meshfunction defining
     the pillars.
@@ -34,7 +34,7 @@ def load_mesh_h5(
         save_pvd_file - if True, the mesh will be saved in a pvd file
 
     Returns:
-        Geometry - nametuple with fields for mesh and pillars 
+        Geometry - nametuple with fields for mesh and pillars
 
     """
 

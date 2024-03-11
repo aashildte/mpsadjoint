@@ -635,21 +635,83 @@ def solve_inverse_problem_phase1(
         )
         states_over_time[time_step] = states[0]
     
-    if output_folder is not None and not data_exist(output_folder):
-        write_inversion_results(
-            geometry.mesh,
-            active_strain_over_time,
-            theta,
-            states_over_time,
-            output_folder,
-        )
+    return active_strain_over_time, theta_over_time, states_over_time
 
+
+def solve_inverse_problem_phase2(
+    geometry: Geometry,
+    u_data: list[da.Function],
+    number_of_iterations: int = 100,
+    input_folder: str | None = None,
+    output_folder: str | None = None,
+
+) -> tuple[list[da.Function], da.Function, list[da.Function]]:
+    """
+
+    Main function; we'll run everything from here.
+
+    Args:
+        geometry: namedtuple Geometry with mesh and surface information
+        u_data: list of displacement data for all time points
+        input_folder: results from phase 1 are assumed to be saved here;
+            if None, we will go straight into phase 2 (zero-valued
+            initial guesses assumed)
+        output_folder: results will be saved here (if provided)
+        number_of_iteration: integer; number of iterations to use
+            for optimizing all time steps combined into one optimization problem
+
+    Returns:
+        active_strain: list of da.Function objects, contains optimized values
+            for active strain, for each time step
+        theta: da.function object, contains optimized values for the fiber
+            direction (as an angle), for all time steps altogether
+        states: list of corresponding states (disp. + pressure), solutions
+            based on active strain and theta values
+
+    """
+
+    active_over_time = []
+    theta_over_time = []
+    states_over_time = []
+    
+    TH = define_state_space(geometry.mesh)
+    U = df.FunctionSpace(geometry.mesh, "CG", 1)
+
+    if input_folder is not None:
+        
+        for i in range(len(u_data)):
+            data_it = input_folder + f"/iteration_{i}"
+            assert data_exist(data_it), "Error: Input folder provided but data does not exist."
+            
+            active, theta, state = load_data(
+                data_it, U, TH, len(u_data)
+            )
+
+            active_over_time.append(active[0])
+            theta_over_time.append(theta)
+            states_over_time.append(state[0])
+
+        # use average value as initial guess for phase 2
+    
+        theta = df.Function(U, name="Theta")
+        theta_sum = 0
+        for th in theta_over_time:
+            theta_sum += theta
+
+        theta.assign(df.project(theta_sum / len(theta_over_time), U))
+
+    else:
+        num_time_step = len(u_data)
+        active_over_time = [da.Function(U, name="Active strain")]*num_time_step
+        theta = da.Function(U, name="Theta")
+        states = [da.Function(TH)]*num_time_step
+   
     states_over_time2 = []
 
-    # solve forward problems: make sure initial guesses will converge in phase 2
+    # solve forward problems: make sure initial guesses will converge
 
     for t, (active, theta_t, state) in enumerate(
-        zip(active_strain_over_time, theta_over_time, states_over_time)
+        zip(active_over_time, theta_over_time, states_over_time)
     ):
         print("Solving for time step ", t, flush=True)
         newtonsolver, forward_problems, state2 = define_forward_problems(
@@ -668,73 +730,6 @@ def solve_inverse_problem_phase1(
         )
         states_over_time2.append(state)
 
-    return active_strain_over_time, theta_over_time, states_over_time2
-
-
-def solve_inverse_problem_phase2(
-    geometry: Geometry,
-    u_data: list[da.Function],
-    output_folder: str | None = None,
-    number_of_iterations_iterative: int = 100,
-    number_of_iterations_combined: int = 100,
-) -> tuple[list[da.Function], da.Function, list[da.Function]]:
-    """
-
-    Main function; we'll run everything from here.
-
-    Args:
-        geometry: namedtuple Geometry with mesh and surface information
-        u_data: list of displacement data for all time points
-        output_folder: results will be saved here (if provided)
-        number_of_iterations_iterative: integer, number of iterations to use
-            for optimizing each time step in an iterative manner (step by step)
-        number_of_iterations_combined: integer; number of iterations to use
-            for optimizing all time steps combined into one optimization problem
-
-    Returns:
-        active_strain: list of da.Function objects, contains optimized values
-            for active strain, for each time step
-        theta: da.function object, contains optimized values for the fiber
-            direction (as an angle), for all time steps altogether
-        states: list of corresponding states (disp. + pressure), solutions
-            based on active strain and theta values
-
-    """
-
-    if output_folder is None:
-        output_folder_iters = None
-    else:
-        output_folder_iters = (
-            output_folder + f"/iterative_{number_of_iterations_iterative}"
-        )
-
-        data_path = (
-            output_folder
-            + f"/combined_{number_of_iterations_iterative}_{number_of_iterations_combined}"
-        )
-
-        if data_exist(data_path):
-            TH = define_state_space(geometry.mesh)
-            U = df.FunctionSpace(geometry.mesh, "CG", 1)
-
-            print("Data already exists, returning ..", flush=True)
-            active_strain, theta, states = load_data(
-                data_path, U, TH, len(u_data)
-            )
-            return active_strain, theta, states
-
-    if number_of_iterations_iterative > 0:
-        active_strain, theta, states = solve_iteratively(
-            geometry,
-            u_data,
-            number_of_iterations_iterative,
-            output_folder_iters,
-        )
-    else:
-        active_strain = [da.Constant(0) for _ in range(len(u_data))]
-        theta = da.Constant(0)
-        states = None
-
     (
         active_strain,
         theta,
@@ -743,10 +738,10 @@ def solve_inverse_problem_phase2(
     ) = solve_pdeconstrained_optimization_problem(
         geometry,
         u_data,
-        active_strain,
+        active_over_time,
         theta,
-        states,
-        number_of_iterations_combined,
+        states_over_time2,
+        number_of_iterations,
     )
 
     if output_folder is not None:
@@ -755,12 +750,12 @@ def solve_inverse_problem_phase2(
             active_strain,
             theta,
             states,
-            f"{output_folder}/combined_{number_of_iterations_iterative}_{number_of_iterations_combined}",
+            output_folder,
         )
 
         write_inversion_statistics(
             tracked_quantities,
-            f"{output_folder}/combined_{number_of_iterations_iterative}_{number_of_iterations_combined}",
+            output_folder
         )
 
     return active_strain, theta, states

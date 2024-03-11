@@ -221,13 +221,15 @@ def define_forward_problems(
     newtonsolver.parameters.update({"relative_tolerance": 1e-5, "absolute_tolerance": 1e-5})
 
     forward_problems = []
+    if init_states is None:
+        init_states = []
     states = []
 
     for time_step, active_str in enumerate(active_strain):
         print("Solving forward problem step ", time_step, flush=True)
         weak_form, state = define_weak_form(TH, active_str, theta, geometry.ds)
 
-        if init_states is not None:
+        if len(init_states) > time_step:
             state.vector()[:] = init_states[time_step].vector()[:]
 
         forward_problem = NonlinearProblem(weak_form, state, bcs=bcs)

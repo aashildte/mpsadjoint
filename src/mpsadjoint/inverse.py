@@ -6,6 +6,7 @@ Code for solving the inverse problem; optimization part. Core part of the code.
 
 """
 
+from __future__ import annotations
 from functools import partial
 import os
 import heapq
@@ -116,7 +117,7 @@ def cost_function(u_model: list[da.Function], u_data: list[da.Function]) -> floa
 def eval_cb_checkpoint(
     cost_cur: float,
     control_params: list[da.Function],
-    tracked_quantities: list[list[float]],
+    tracked_quantities: tuple[list[float], list[list[float]], list[float]],
     mesh: da.Mesh,
 ):
     """
@@ -193,7 +194,7 @@ def define_forward_problems(
     geometry: Geometry,
     active_strain: list[da.Function],
     theta: da.Function,
-    init_states: list[da.Function] = None,
+    init_states: list[da.Function] | None = None,
 ) -> tuple[list[da.NewtonSolver], list[NonlinearProblem], list[da.Function]]:
     """
 
@@ -243,7 +244,7 @@ def define_optimization_problem(
     u_data: list[da.Function],
     mesh: da.Mesh,
     control_variables: list[da.Function],
-) -> tuple[da.MinimizationProblem, list[list[float]]]:
+) -> tuple[da.MinimizationProblem, tuple[list[float], list[list[float]], list[float]]]:
     """
     Defines key variables for the optimization problem, as well as the
     problem itself.
@@ -267,7 +268,11 @@ def define_optimization_problem(
     control_params = [da.Control(x) for x in control_variables]
 
     # track 3 values : cost fun, active, theta
-    tracked_quantities = [[], [], []]
+    tracked_quantities: tuple[list[float], list[list[float]], list[float]] = (
+        [],
+        [],
+        [],
+    )
 
     eval_cb = partial(
         eval_cb_checkpoint,
@@ -371,7 +376,10 @@ def write_inversion_results(
     write_strain_to_file(T2, strain_values, filename_strain_CG2)
 
 
-def write_inversion_statistics(tracked_quantities: list[float], output_folder: str):
+def write_inversion_statistics(
+    tracked_quantities: tuple[list[float], list[list[float]], list[float]],
+    output_folder: str,
+):
     """
     Saves cost function values + average control values to file.
     """
@@ -421,7 +429,7 @@ def solve_pdeconstrained_optimization_problem(
     list[da.Function],
     da.Function,
     list[da.Function],
-    list[list[float]],
+    tuple[list[float], list[list[float]], list[float]],
 ]:
     """
 
@@ -514,7 +522,7 @@ def solve_inverse_problem_phase1(
     geometry: Geometry,
     u_data: list[da.Function],
     number_of_iterations: int = 100,
-    output_folder: str = None,
+    output_folder: str | None = None,
 ) -> tuple[list[da.Function], list[da.Function], list[da.Function]]:
     """
 
@@ -545,7 +553,7 @@ def solve_inverse_problem_phase1(
     # initial values; to be replaced as we progress more time steps
     active_strain = [da.Constant(0.0)]
     theta = da.Constant(0.0)
-    states = None
+    states = []
 
     active_strain_over_time = [None] * num_time_steps
     theta_over_time = [None] * num_time_steps
@@ -838,6 +846,9 @@ def solve_inverse_problem_phase3(
         states_all_syncronized,
         number_of_iterations,
     )
+
+    if output_folders is None:
+        output_folders = []
 
     for i, output_folder in enumerate(output_folders):
         active_strain_per_dose = active_all[i * T : (i + 1) * T]

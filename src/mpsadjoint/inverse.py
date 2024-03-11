@@ -408,7 +408,6 @@ def write_inversion_statistics(
 
 def sort_data_after_displacement(
     u_data: list[da.Function],
-    time : list[float] | list[int],
 ) -> list[da.Function]:
     """
     Sort the data, i.e. actually the time steps used to access the data, after
@@ -416,18 +415,18 @@ def sort_data_after_displacement(
 
     Args:
         u_data: list of displacement functions representing original data
-        time: list of time steps (list of float or ints), matching u_data
 
     Returns:
         heap with displacement norms as value, time_steps as values
 
     """
-    
+
+    num_time_steps = len(u_data)
     heap: list[tuple[float, int]] = []
 
-    for t, time_step in enumerate(time):
+    for time_step in range(num_time_steps):
         disp_norm = df.assemble(
-            df.inner(u_data[t], u_data[t]) * df.dx
+            df.inner(u_data[time_step], u_data[time_step]) * df.dx
         )
         heapq.heappush(heap, (disp_norm, time_step))
 
@@ -536,11 +535,9 @@ def load_data(output_folder, U, TH, num_time_steps):
 
     return active, theta, states
 
-
 def solve_inverse_problem_phase1(
     geometry: Geometry,
     u_data: list[da.Function],
-    time : list[float] | list[int],
     number_of_iterations: int = 100,
     output_folder: str = None,
 ) -> tuple[list[da.Function], list[da.Function], list[da.Function]]:
@@ -557,7 +554,6 @@ def solve_inverse_problem_phase1(
     Args:
         geometry: mesh + ds for pillars
         u_data: list of functions for original displacement
-        time: list of time steps (list of float or ints), matching u_data
         number_of_iterations: number of iterations for the min. problem
         output_folder: save results here
 
@@ -568,16 +564,14 @@ def solve_inverse_problem_phase1(
 
     """
 
-    assert len(u_data) == len(time), "Error: length of u_data doens't match length of time"
-    heap = sort_data_after_displacement(u_data, time)
+    num_time_steps = len(u_data)
+    heap = sort_data_after_displacement(u_data)
 
-    # initial values; to be replaced iteratively as we progress more time steps
+    # initial values; to be replaced as we progress more time steps
     active_strain = [da.Constant(0.0)]
     theta = da.Constant(0.0)
     states = None
 
-    # structures for saving data over time
-    num_time_steps = len(u_data)
     active_strain_over_time = [None] * num_time_steps
     theta_over_time = [None] * num_time_steps
     states_over_time = [None] * num_time_steps
@@ -595,7 +589,7 @@ def solve_inverse_problem_phase1(
 
         if output_folder is not None and data_exist(output_folder_t):
             print(
-                f"Loading inversion results for time {time_step}; "
+                f"Loading inversion results for time step {time_step}; "
                 f"iteration {iteration_num} / {len(u_data)}",
                 flush=True,
             )
@@ -604,7 +598,7 @@ def solve_inverse_problem_phase1(
             )
         else:
             print(
-                f"Starting inversion for time {time_step}; "
+                f"Starting inversion for time step {time_step}; "
                 f"iteration {iteration_num} / {len(u_data)}",
                 flush=True,
             )
@@ -621,30 +615,8 @@ def solve_inverse_problem_phase1(
                 states,
                 number_of_iterations,
             )
-    
 
             if output_folder is not None:
-
-                # solve forward problem: makes sure initial guesses will converge in phase 2
-                newtonsolver, forward_problems, state_forw = define_forward_problems(
-                    geometry, [active_strain], theta, init_states=[states]
-                )
-        
-                active_forw = da.Function(U, name="Active strain")
-                theta_forw = da.Function(U, name="Theta")
-                
-                solve_forward_problem_iteratively(
-                    active_forw,
-                    theta_forw,
-                    state_forw[0],
-                    newtonsolver,
-                    forward_problems[0],
-                    active,
-                    theta,
-                    step_length=1.0,
-                )
-                
-
                 write_inversion_results(
                     geometry.mesh,
                     active_strain,
@@ -663,10 +635,27 @@ def solve_inverse_problem_phase1(
         )
         states_over_time[time_step] = states[0]
     
+    if output_folder is not None and not data_exist(output_folder):
+        write_inversion_results(
+            geometry.mesh,
+            active_strain_over_time,
+            theta,
+            states_over_time,
+            output_folder,
+        )
 
-    
     states_over_time2 = []
-        
+
+    # solve forward problems: make sure initial guesses will converge in phase 2
+
+    for t, (active, theta_t, state) in enumerate(
+        zip(active_strain_over_time, theta_over_time, states_over_time)
+    ):
+        print("Solving for time step ", t, flush=True)
+        newtonsolver, forward_problems, state2 = define_forward_problems(
+            geometry, [active], theta_t, init_states=[state]
+        )
+
         solve_forward_problem_iteratively(
             active,
             theta_t,
@@ -678,16 +667,6 @@ def solve_inverse_problem_phase1(
             step_length=1.0,
         )
         states_over_time2.append(state)
-
-    if output_folder is not None:
-        write_inversion_results(
-            geometry.mesh,
-            active_strain_over_time,
-            theta_over_time,
-            states_over_time2,
-            output_folder,
-        )
-
 
     return active_strain_over_time, theta_over_time, states_over_time2
 

@@ -128,10 +128,6 @@ u_data = mps_to_fenics(
     displacement_data, um_per_pixel, geometry.mesh, from_step, to_step
 )[::step_length]
 
-# recommended: keep time as int values, even if that doesn't match your unit;
-# this makes paths easier to read to/from
-time = np.arange(from_step, to_step, step_length, type=np.int32)
-
 # save data here
 
 output_folder = f"results/{study_id}"
@@ -158,5 +154,5 @@ if not os.path.isfile(filename_strain):
 
 # solve the inverse problem
 solve_inverse_problem_phase1(
-    geometry, u_data, time, num_iterations_phase1, output_folder,
+    geometry, u_data, num_iterations_phase1, output_folder,
 )

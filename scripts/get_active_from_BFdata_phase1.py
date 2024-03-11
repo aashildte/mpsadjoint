@@ -6,7 +6,7 @@ inversion per time step (and per drug dose, if applicable).
 This script runs the process "serially" by using solution from previous
 steps as initial guesses to next steps.
 
-Another option, where all steps are individual, is simply to use 
+Another option, where all steps are individual, is simply to use
 --from_step and --to_step to handle one by one time step, in which case
 zero guesses will always be initial guesses.
 
@@ -32,12 +32,8 @@ set_fenics_parameters()
 def parse_cl_arguments():
     parser = ArgumentParser()
 
-    parser.add_argument(
-        "--from_step", type=int, default=43, help="Starting time step"
-    )
-    parser.add_argument(
-        "--to_step", type=int, default=44, help="Final time step"
-    )
+    parser.add_argument("--from_step", type=int, default=43, help="Starting time step")
+    parser.add_argument("--to_step", type=int, default=44, help="Final time step")
 
     parser.add_argument(
         "--step_length",
@@ -57,7 +53,10 @@ def parse_cl_arguments():
         "--output_folder",
         type=str,
         default="results",
-        help="Where to save the results (main folder); if set to None, the results will not be saved.",
+        help=(
+            "Where to save the results (main folder); "
+            "if set to None, the results will not be saved."
+        ),
     )
 
     parser.add_argument(
@@ -124,9 +123,9 @@ geometry = load_mesh_h5(mesh_file)
 # convert displacement data to Fenics functions
 
 displacement_data = np.load(displacement_file)
-u_data = mps_to_fenics(
-    displacement_data, um_per_pixel, geometry.mesh, from_step, to_step
-)[::step_length]
+u_data = mps_to_fenics(displacement_data, um_per_pixel, geometry.mesh, from_step, to_step)[
+    ::step_length
+]
 
 # save data here
 if study_id != "":
@@ -156,5 +155,8 @@ if not os.path.isfile(filename_strain):
 
 # solve the inverse problem
 solve_inverse_problem_phase1(
-    geometry, u_data, num_iterations_phase1, output_folder,
+    geometry,
+    u_data,
+    num_iterations_phase1,
+    output_folder,
 )

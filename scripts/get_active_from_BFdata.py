@@ -7,7 +7,6 @@ import mps  # depends on this for getting units
 from mpsadjoint.mpsmechanics import mps_to_fenics
 from mpsadjoint.mesh_setup import load_mesh_h5
 from mpsadjoint.cardiac_mechanics import set_fenics_parameters
-from mpsadjoint.inverse import solve_inverse_problem
 from mpsadjoint.io_files import write_displacement_to_file, write_strain_to_file
 
 set_fenics_parameters()
@@ -129,10 +128,10 @@ if not os.path.isfile(filename_strain_CG2):
     T2 = df.TensorFunctionSpace(geometry.mesh, "CG", 2)
     write_strain_to_file(T2, E_data, filename_strain_CG2)
 
-solve_inverse_problem(
-    geometry,
-    u_data,
-    output_folder,
-    num_iterations_iterative,
-    num_iterations_combined,
-)
+# solve_inverse_problem(
+#     geometry,
+#     u_data,
+#     output_folder,
+#     num_iterations_iterative,
+#     num_iterations_combined,
+# )

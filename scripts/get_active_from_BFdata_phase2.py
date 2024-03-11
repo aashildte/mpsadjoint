@@ -14,19 +14,13 @@ We'll read values in from file based on these parameters.
 
 """
 
-import os
 from argparse import ArgumentParser
 import numpy as np
-import dolfin as df
 
 from mpsadjoint.mpsmechanics import mps_to_fenics
 from mpsadjoint.mesh_setup import load_mesh_h5
 from mpsadjoint.cardiac_mechanics import set_fenics_parameters
 from mpsadjoint.inverse import solve_inverse_problem_phase2
-from mpsadjoint.io_files import (
-    write_displacement_to_file,
-    write_strain_to_file,
-)
 
 set_fenics_parameters()
 
@@ -34,12 +28,8 @@ set_fenics_parameters()
 def parse_cl_arguments():
     parser = ArgumentParser()
 
-    parser.add_argument(
-        "--from_step", type=int, default=43, help="Starting time step"
-    )
-    parser.add_argument(
-        "--to_step", type=int, default=44, help="Final time step"
-    )
+    parser.add_argument("--from_step", type=int, default=43, help="Starting time step")
+    parser.add_argument("--to_step", type=int, default=44, help="Final time step")
 
     parser.add_argument(
         "--step_length",
@@ -55,12 +45,14 @@ def parse_cl_arguments():
         help="How many iterations to use solving the inverse problem in this problem (phase 2)",
     )
 
-
     parser.add_argument(
         "--output_folder",
         type=str,
         default="results",
-        help="Where to save the results (main folder); if set to None, the results will not be saved.",
+        help=(
+            "Where to save the results (main folder); "
+            "if set to None, the results will not be saved."
+        ),
     )
 
     parser.add_argument(
@@ -127,15 +119,13 @@ geometry = load_mesh_h5(mesh_file)
 # convert displacement data to Fenics functions
 
 displacement_data = np.load(displacement_file)
-u_data = mps_to_fenics(
-    displacement_data, um_per_pixel, geometry.mesh, from_step, to_step
-)[::step_length]
+u_data = mps_to_fenics(displacement_data, um_per_pixel, geometry.mesh, from_step, to_step)[
+    ::step_length
+]
 
 # get initial guesses from phase 1; save output data here after phase 2
 init_folder = f"{output_folder}/{study_id}/phase1"
 output_folder = f"{output_folder}/{study_id}/phase2"
 
 # solve the inverse problem in phase 2
-solve_inverse_problem_phase2(
-    geometry, u_data, num_iterations, init_folder, output_folder
-)
+solve_inverse_problem_phase2(geometry, u_data, num_iterations, init_folder, output_folder)

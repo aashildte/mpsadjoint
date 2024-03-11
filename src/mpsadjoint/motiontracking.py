@@ -17,9 +17,7 @@ import matplotlib.pyplot as plt
 
 def to_uint8(img):
     img_float = img.astype(float)
-    return (256 * (img_float / max(img_float.max(), 1e-12))).astype(
-        np.uint8
-    )
+    return (256 * (img_float / max(img_float.max(), 1e-12))).astype(np.uint8)
 
 
 def flow(
@@ -188,16 +186,12 @@ def process_displacement(path, reference_time_step):
     um_per_pixel = data.info["um_per_pixel"]
 
     dt = data.info["dt"]
-    ref = data.frames[
-        :, :, reference_time_step - 5 : reference_time_step
-    ].mean(2)
+    ref = data.frames[:, :, reference_time_step - 5 : reference_time_step].mean(2)
 
     # ref_shape = ref.shape[0] * ref.shape[1]
     # print(np.linalg.norm(ref)/ref_shape)
 
-    u = um_per_pixel * get_displacements(
-        data.frames[:, :, :], reference_image=ref
-    )
+    u = um_per_pixel * get_displacements(data.frames[:, :, :], reference_image=ref)
 
     X, Y, T, _ = u.shape
 
@@ -210,9 +204,7 @@ def process_displacement(path, reference_time_step):
 
     avg_beat = np.mean(np.array(all_beats), axis=0)
 
-    c1 = np.linalg.norm(
-        avg_beat, axis=3
-    )  # norm over (x,y)-koordinat -> X x Y x T-shape
+    c1 = np.linalg.norm(avg_beat, axis=3)  # norm over (x,y)-koordinat -> X x Y x T-shape
     c2 = np.mean(c1, axis=(0, 1))  # average over (X,Y) -> T-shape
 
     time = [dt * t for t in range(0, len(c2))]

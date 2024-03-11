@@ -66,18 +66,19 @@ def test_constant_multistep():
 
         u_synthetic, _ = state.split()
         synthetic_data.append(u_synthetic)
-    
+
     # then solve the inverse problem
-    
+
     active_m, _, _ = solve_inverse_problem_phase1(
-        geometry=geometry, u_data=synthetic_data,
+        geometry=geometry,
+        u_data=synthetic_data,
     )
 
     active_avg = df.assemble(active_m[-1] * df.dx) / df.assemble(
         da.Constant(1) * df.dx(geometry.mesh)
     )
-    
-    print(active_avg, df.assemble(active*df.dx(geometry.mesh)))
+
+    print(active_avg, df.assemble(active * df.dx(geometry.mesh)))
 
     assert math.isclose(
         active_avg, active, abs_tol=0.1
@@ -101,13 +102,14 @@ def test_constant():
     # then consider the inverse problem
 
     active_m, _, _ = solve_inverse_problem_phase1(
-        geometry=geometry, u_data=[u_synthetic],
+        geometry=geometry,
+        u_data=[u_synthetic],
     )
 
     active_avg = df.assemble(active_m[0] * df.dx) / df.assemble(
         da.Constant(1) * df.dx(geometry.mesh)
     )
-    print("active_avg: ", active_avg)    
+    print("active_avg: ", active_avg)
     assert math.isclose(
         active_avg, active, abs_tol=0.001
     ), "Error: Could not solve constant problem"

@@ -46,9 +46,7 @@ def create_forward_problem_unit_cube(TH, active, theta, geometry, bcs):
     return state, solver, problem
 
 
-@pytest.mark.parametrize(
-    "peak_active, peak_theta", [(0.01, 0.01), (0.02, 0.02)]
-)
+@pytest.mark.parametrize("peak_active, peak_theta", [(0.01, 0.01), (0.02, 0.02)])
 def test_iterative_solver(peak_active, peak_theta):
     TH, bcs, geometry = setup_mesh_funspaces()
 
@@ -59,9 +57,7 @@ def test_iterative_solver(peak_active, peak_theta):
     theta = da.Function(U)
     theta.interpolate(da.Constant(0.005))
 
-    state, solver, problem = create_forward_problem_unit_cube(
-        TH, active, theta, geometry, bcs
-    )
+    state, solver, problem = create_forward_problem_unit_cube(TH, active, theta, geometry, bcs)
 
     original_state_values = state.vector()[:]
 
@@ -76,27 +72,19 @@ def test_iterative_solver(peak_active, peak_theta):
     init_state = da.Function(TH)
     init_state.assign(state)
 
-    solve_forward_problem_iteratively(
-        active, theta, state, solver, problem, new_active, new_theta
-    )
+    solve_forward_problem_iteratively(active, theta, state, solver, problem, new_active, new_theta)
 
     eps = 1e-6
-    assert not np.all(
-        np.isclose(state.vector()[:], original_state_values, atol=eps)
-    )
+    assert not np.all(np.isclose(state.vector()[:], original_state_values, atol=eps))
 
     # then back again
     new_active.interpolate(da.Constant(0.005))
     new_theta.interpolate(da.Constant(0.005))
 
-    solve_forward_problem_iteratively(
-        active, theta, state, solver, problem, new_active, new_theta
-    )
+    solve_forward_problem_iteratively(active, theta, state, solver, problem, new_active, new_theta)
 
     eps = 1e-6
-    assert np.all(
-        np.isclose(state.vector()[:], original_state_values, atol=eps)
-    )
+    assert np.all(np.isclose(state.vector()[:], original_state_values, atol=eps))
 
 
 if __name__ == "__main__":

@@ -110,7 +110,10 @@ def fiber_direction(theta: da.Function):
     """
 
     R = df.as_matrix(
-        ((df.cos(theta), -df.sin(theta)), (df.sin(theta), df.cos(theta)))
+        (
+            (df.cos(theta), -df.sin(theta)),
+            (df.sin(theta), df.cos(theta)),
+        )
     )
 
     return R * df.as_vector([1.0, 0.0])
@@ -261,7 +264,9 @@ def define_weak_form(
     F = df.variable(df.Identity(2) + df.grad(u))
     J = df.det(F)
 
-    PK1 = PK_stress_tensor(F, p, active_function, mat_params_tissue, theta)
+    PK1 = PK_stress_tensor(
+        F, p, active_function, mat_params_tissue, theta
+    )
 
     elasticity_term = df.inner(PK1, df.grad(v)) * df.dx
     pressure_term = q * (J - 1) * df.dx
@@ -285,7 +290,9 @@ def solve_forward_problem(R, state, bcs: list[da.DirichletBC]):
         R == 0,
         state,
         bcs,
-        solver_parameters={"newton_solver": {"maximum_iterations": 20}},
+        solver_parameters={
+            "newton_solver": {"maximum_iterations": 20}
+        },
     )
 
 
@@ -345,7 +352,9 @@ def solve_forward_problem_iteratively(
             to use for stepping up to expected values
     """
 
-    assert step_length > 1e-14, "Error: Really low step length – aborting"
+    assert (
+        step_length > 1e-14
+    ), "Error: Really low step length – aborting"
     assert step_length <= 1.0, "Error: Step length can't be > 1."
 
     original_active_values = get_control_values(active_function)
@@ -369,8 +378,11 @@ def solve_forward_problem_iteratively(
                 * step_length
                 * (active_values - original_active_values)
             )
-            new_theta_values = original_theta_values + n * step_length * (
-                theta_values - original_theta_values
+            new_theta_values = (
+                original_theta_values
+                + n
+                * step_length
+                * (theta_values - original_theta_values)
             )
 
             assign_new_values(theta_function, new_theta_values)
@@ -391,7 +403,9 @@ def solve_forward_problem_iteratively(
         assign_new_values(theta_function, original_theta_values)
         assign_new_values(state_function, original_state_values)
 
-        print("Error in iterative solve; trying with a smaller value.")
+        print(
+            "Error in iterative solve; trying with a smaller value."
+        )
         print("Step length: ", step_length / 2)
         solve_forward_problem_iteratively(
             active_function,

@@ -14,7 +14,7 @@ from types import FunctionType
 
 def mps_to_fenics(
     mps_data: np.array,
-    um_per_pixel : float,
+    um_per_pixel: float,
     mesh: da.Mesh,
     time_start: int,
     time_stop: int,
@@ -40,7 +40,9 @@ def mps_to_fenics(
     V2 = df.VectorFunctionSpace(mesh, "CG", 2)
 
     v_d = V2.dofmap().dofs()
-    mesh_coords = V2.tabulate_dof_coordinates()[::2]  # 2 in 2D, 3 in 3D
+    mesh_coords = V2.tabulate_dof_coordinates()[
+        ::2
+    ]  # 2 in 2D, 3 in 3D
 
     u_data = []
 
@@ -65,8 +67,7 @@ def mps_to_fenics(
 
 
 def define_value_ranges(
-        mps_data: np.array,
-        um_per_pixel : float,
+    mps_data: np.array, um_per_pixel: float
 ) -> tuple[np.array, np.array]:
     """
 

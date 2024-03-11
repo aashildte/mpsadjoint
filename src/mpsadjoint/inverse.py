@@ -401,7 +401,9 @@ def write_inversion_statistics(
     active_strain = np.array(tracked_quantities[1])
     theta = np.array(tracked_quantities[2])
 
-    np.save(f"{output_folder}/cost_function.npy", cost_function_values)
+    np.save(
+        f"{output_folder}/cost_function.npy", cost_function_values
+    )
     np.save(f"{output_folder}/active_strain.npy", active_strain)
     np.save(f"{output_folder}/theta.npy", theta)
 
@@ -441,7 +443,10 @@ def solve_pdeconstrained_optimization_problem(
     init_states: list[da.Function],
     number_of_iterations: int,
 ) -> tuple[
-    list[da.Function], da.Function, list[da.Function], list[list[float]]
+    list[da.Function],
+    da.Function,
+    list[da.Function],
+    list[list[float]],
 ]:
     """
 
@@ -525,7 +530,9 @@ def load_data(output_folder, U, TH, num_time_steps):
     active = read_active_strain_from_file(
         U, output_folder + "/active_strain.xdmf", num_time_steps
     )
-    theta = read_fiber_angle_from_file(U, output_folder + "/theta.xdmf")
+    theta = read_fiber_angle_from_file(
+        U, output_folder + "/theta.xdmf"
+    )
     states = read_states_from_file(
         TH,
         output_folder + "/displacement.xdmf",
@@ -534,6 +541,7 @@ def load_data(output_folder, U, TH, num_time_steps):
     )
 
     return active, theta, states
+
 
 def solve_inverse_problem_phase1(
     geometry: Geometry,
@@ -634,7 +642,7 @@ def solve_inverse_problem_phase1(
             active_strain[0], U
         )
         states_over_time[time_step] = states[0]
-    
+
     return active_strain_over_time, theta_over_time, states_over_time
 
 
@@ -644,7 +652,6 @@ def solve_inverse_problem_phase2(
     number_of_iterations: int = 100,
     input_folder: str | None = None,
     output_folder: str | None = None,
-
 ) -> tuple[list[da.Function], da.Function, list[da.Function]]:
     """
 
@@ -673,16 +680,18 @@ def solve_inverse_problem_phase2(
     active_over_time = []
     theta_over_time = []
     states_over_time = []
-    
+
     TH = define_state_space(geometry.mesh)
     U = df.FunctionSpace(geometry.mesh, "CG", 1)
 
     if input_folder is not None:
-        
+
         for i in range(len(u_data)):
             data_it = input_folder + f"/iteration_{i}"
-            assert data_exist(data_it), "Error: Input folder provided but data does not exist."
-            
+            assert data_exist(
+                data_it
+            ), "Error: Input folder provided but data does not exist."
+
             active, theta, state = load_data(
                 data_it, U, TH, len(u_data)
             )
@@ -692,7 +701,7 @@ def solve_inverse_problem_phase2(
             states_over_time.append(state[0])
 
         # use average value as initial guess for phase 2
-    
+
         theta = df.Function(U, name="Theta")
         theta_sum = 0
         for th in theta_over_time:
@@ -702,10 +711,12 @@ def solve_inverse_problem_phase2(
 
     else:
         num_time_step = len(u_data)
-        active_over_time = [da.Function(U, name="Active strain")]*num_time_step
+        active_over_time = [
+            da.Function(U, name="Active strain")
+        ] * num_time_step
         theta = da.Function(U, name="Theta")
-        states = [da.Function(TH)]*num_time_step
-   
+        states = [da.Function(TH)] * num_time_step
+
     states_over_time2 = []
 
     # solve forward problems: make sure initial guesses will converge
@@ -746,17 +757,10 @@ def solve_inverse_problem_phase2(
 
     if output_folder is not None:
         write_inversion_results(
-            geometry.mesh,
-            active_strain,
-            theta,
-            states,
-            output_folder,
+            geometry.mesh, active_strain, theta, states, output_folder
         )
-       
-        write_inversion_statistics(
-            tracked_quantities,
-            output_folder
-        )
+
+        write_inversion_statistics(tracked_quantities, output_folder)
 
     return active_strain, theta, states
 
@@ -765,8 +769,8 @@ def solve_inverse_problem_phase3(
     geometry: Geometry,
     u_data: list[da.Function],
     number_of_iterations: int = 100,
-    input_folders: list[str] | None=None,
-    output_folders: list[str] | None=None,
+    input_folders: list[str] | None = None,
+    output_folders: list[str] | None = None,
 ) -> tuple[list[da.Function], da.Function, list[da.Function]]:
     """
 
@@ -817,17 +821,21 @@ def solve_inverse_problem_phase3(
             states_all += states
             theta_all.append(theta)
     else:
-        N = len(u_data)*len(u_data[0])
-        active_over_time = [da.Function(U, name="Active strain")]*N
-        states = [da.Function(TH)]*N
+        N = len(u_data) * len(u_data[0])
+        active_over_time = [da.Function(U, name="Active strain")] * N
+        states = [da.Function(TH)] * N
         theta = da.Function(U, name="Theta")
 
     for u_d in u_data:
         # this is technically not so important, but the code assumes this to be true:
-        assert len(u_d) == len(u_data[0]), "Error: number of time steps per dose needs to be the same!"
+        assert len(u_d) == len(
+            u_data[0]
+        ), "Error: number of time steps per dose needs to be the same!"
         u_data_all += u_d
 
-    assert len(active_all) == len(states_all) and len(active_all) == len(
+    assert len(active_all) == len(states_all) and len(
+        active_all
+    ) == len(
         u_data_all
     ), "Error: Active / states / data do not have the same length."
 
@@ -899,8 +907,6 @@ def solve_inverse_problem_phase3(
             output_folder,
         )
 
-        write_inversion_statistics(
-            tracked_quantities, output_folder
-        )
+        write_inversion_statistics(tracked_quantities, output_folder)
 
     return active_all, theta, states_all

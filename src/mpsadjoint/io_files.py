@@ -42,7 +42,8 @@ def read_active_strain_from_file(
     """
 
     active_strain = [
-        da.Function(U, name="Active strain") for _ in range(num_time_steps)
+        da.Function(U, name="Active strain")
+        for _ in range(num_time_steps)
     ]
 
     with df.XDMFFile(filename) as fin:
@@ -139,7 +140,10 @@ def write_fiber_direction_to_file(
     """
 
     rotation_matrix = df.as_matrix(
-        ((df.cos(theta), -df.sin(theta)), (df.sin(theta), df.cos(theta)))
+        (
+            (df.cos(theta), -df.sin(theta)),
+            (df.sin(theta), df.cos(theta)),
+        )
     )
 
     fiber_dir = rotation_matrix * df.as_vector([1.0, 0.0])
@@ -172,8 +176,12 @@ def write_states_to_file(
 
     for i, state in enumerate(states):
         u, p = state.split(deepcopy=True)
-        fout_disp.write_checkpoint(u, "Displacement (µm)", i, append=True)
-        fout_pressure.write_checkpoint(p, "Pressure (kPa)", i, append=True)
+        fout_disp.write_checkpoint(
+            u, "Displacement (µm)", i, append=True
+        )
+        fout_pressure.write_checkpoint(
+            p, "Pressure (kPa)", i, append=True
+        )
 
     fout_disp.close()
     fout_pressure.close()

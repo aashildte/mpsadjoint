@@ -5,7 +5,6 @@
 """
 
 
-
 import dolfin as df
 import dolfin_adjoint as da
 

@@ -6,6 +6,7 @@ Code for solving the inverse problem; optimization part. Core part of the code.
 
 """
 
+from __future__ import annotations
 from functools import partial
 import os
 import heapq
@@ -57,9 +58,7 @@ class RobustReducedFunctional(da.ReducedFunctional):
         return value
 
 
-def cost_function(
-    u_model: list[da.Function], u_data: list[da.Function]
-) -> float:
+def cost_function(u_model: list[da.Function], u_data: list[da.Function]) -> float:
     r"""
 
     Computes the difference between u_model and u_data as a surface integral.
@@ -98,17 +97,13 @@ def cost_function(
         if E_d_int > 0:
             cost_fun += surface_int(E_m - E_d) / E_d_int
         else:
-            print(
-                "Warning: Strain value found to be zero; omitted from cost function."
-            )
+            print("Warning: Strain value found to be zero; omitted from cost function.")
 
         u_d_int = surface_int(u_d)
         if u_d_int > 0:
             cost_fun += surface_int(u_m - u_d) / u_d_int
         else:
-            print(
-                "Warning: Displacement value found to be zero; omitted from cost function."
-            )
+            print("Warning: Displacement value found to be zero; omitted from cost function.")
 
     print(
         "Cost function displacement difference: ",
@@ -122,7 +117,7 @@ def cost_function(
 def eval_cb_checkpoint(
     cost_cur: float,
     control_params: list[da.Function],
-    tracked_quantities: list[list[float]],
+    tracked_quantities: tuple[list[float], list[list[float]], list[float]],
     mesh: da.Mesh,
 ):
     """
@@ -199,11 +194,8 @@ def define_forward_problems(
     geometry: Geometry,
     active_strain: list[da.Function],
     theta: da.Function,
-    init_states: list[da.Function] = None,
-) -> tuple[
-    list[da.NewtonSolver], list[NonlinearProblem], list[da.Function]
-]:
-
+    init_states: list[da.Function] | None = None,
+) -> tuple[list[da.NewtonSolver], list[NonlinearProblem], list[da.Function]]:
     """
 
     Defines all forward (mechanical) problems; including interpolation
@@ -226,20 +218,18 @@ def define_forward_problems(
     bcs = define_bcs(TH)
 
     newtonsolver = da.NewtonSolver()
-    newtonsolver.parameters.update(
-        {"relative_tolerance": 1e-5, "absolute_tolerance": 1e-5}
-    )
+    newtonsolver.parameters.update({"relative_tolerance": 1e-5, "absolute_tolerance": 1e-5})
 
     forward_problems = []
+    if init_states is None:
+        init_states = []
     states = []
 
     for time_step, active_str in enumerate(active_strain):
         print("Solving forward problem step ", time_step, flush=True)
-        weak_form, state = define_weak_form(
-            TH, active_str, theta, geometry.ds
-        )
+        weak_form, state = define_weak_form(TH, active_str, theta, geometry.ds)
 
-        if init_states is not None:
+        if len(init_states) > time_step:
             state.vector()[:] = init_states[time_step].vector()[:]
 
         forward_problem = NonlinearProblem(weak_form, state, bcs=bcs)
@@ -256,7 +246,7 @@ def define_optimization_problem(
     u_data: list[da.Function],
     mesh: da.Mesh,
     control_variables: list[da.Function],
-) -> tuple[da.MinimizationProblem, list[list[float]]]:
+) -> tuple[da.MinimizationProblem, tuple[list[float], list[list[float]], list[float]]]:
     """
     Defines key variables for the optimization problem, as well as the
     problem itself.
@@ -280,7 +270,11 @@ def define_optimization_problem(
     control_params = [da.Control(x) for x in control_variables]
 
     # track 3 values : cost fun, active, theta
-    tracked_quantities = [[], [], []]
+    tracked_quantities: tuple[list[float], list[list[float]], list[float]] = (
+        [],
+        [],
+        [],
+    )
 
     eval_cb = partial(
         eval_cb_checkpoint,
@@ -288,18 +282,12 @@ def define_optimization_problem(
         mesh=mesh,
     )
 
-    reduced_functional = RobustReducedFunctional(
-        cost_fun, control_params, eval_cb_post=eval_cb
-    )
+    reduced_functional = RobustReducedFunctional(cost_fun, control_params, eval_cb_post=eval_cb)
 
     # one bound for every active tension field + one bound for the fiber dir. angle
-    bounds = [(0, 0.3)] * (len(control_variables) - 1) + [
-        (-np.pi / 2, np.pi / 2)
-    ]
+    bounds = [(0, 0.3)] * (len(control_variables) - 1) + [(-np.pi / 2, np.pi / 2)]
 
-    optimization_problem = da.MinimizationProblem(
-        reduced_functional, bounds=bounds
-    )
+    optimization_problem = da.MinimizationProblem(reduced_functional, bounds=bounds)
 
     return optimization_problem, tracked_quantities
 
@@ -391,7 +379,8 @@ def write_inversion_results(
 
 
 def write_inversion_statistics(
-    tracked_quantities: list[float], output_folder: str
+    tracked_quantities: tuple[list[float], list[list[float]], list[float]],
+    output_folder: str,
 ):
     """
     Saves cost function values + average control values to file.
@@ -401,9 +390,7 @@ def write_inversion_statistics(
     active_strain = np.array(tracked_quantities[1])
     theta = np.array(tracked_quantities[2])
 
-    np.save(
-        f"{output_folder}/cost_function.npy", cost_function_values
-    )
+    np.save(f"{output_folder}/cost_function.npy", cost_function_values)
     np.save(f"{output_folder}/active_strain.npy", active_strain)
     np.save(f"{output_folder}/theta.npy", theta)
 
@@ -427,9 +414,7 @@ def sort_data_after_displacement(
     heap: list[tuple[float, int]] = []
 
     for time_step in range(num_time_steps):
-        disp_norm = df.assemble(
-            df.inner(u_data[time_step], u_data[time_step]) * df.dx
-        )
+        disp_norm = df.assemble(df.inner(u_data[time_step], u_data[time_step]) * df.dx)
         heapq.heappush(heap, (disp_norm, time_step))
 
     return heap
@@ -446,7 +431,7 @@ def solve_pdeconstrained_optimization_problem(
     list[da.Function],
     da.Function,
     list[da.Function],
-    list[list[float]],
+    tuple[list[float], list[list[float]], list[float]],
 ]:
     """
 
@@ -455,7 +440,7 @@ def solve_pdeconstrained_optimization_problem(
         u_data: list of displacement functions representing original data
         init_active_strain: list of initial guesses for the active strain field
         init_theta: initial guess for the fiber direction angle function
-        init_states: list of states corresponding to the solution of the 
+        init_states: list of states corresponding to the solution of the
             init_active_strain and init_theta fields
         number_of_iterations: number of iterations to use in the optimization problem
 
@@ -467,9 +452,7 @@ def solve_pdeconstrained_optimization_problem(
 
     """
 
-    active_strain, theta = initiate_controls(
-        geometry.mesh, init_active_strain, init_theta
-    )
+    active_strain, theta = initiate_controls(geometry.mesh, init_active_strain, init_theta)
 
     newtonsolver, forward_problems, states = define_forward_problems(
         geometry, active_strain, theta, init_states
@@ -481,9 +464,7 @@ def solve_pdeconstrained_optimization_problem(
         states, u_data, geometry.mesh, control_variables
     )
 
-    optimal_values = solve_optimization_problem(
-        problem, number_of_iterations
-    )
+    optimal_values = solve_optimization_problem(problem, number_of_iterations)
 
     *optimal_active_strain, optimal_theta = optimal_values
 
@@ -527,12 +508,8 @@ def data_exist(output_folder: str) -> bool:
 
 
 def load_data(output_folder, U, TH, num_time_steps):
-    active = read_active_strain_from_file(
-        U, output_folder + "/active_strain.xdmf", num_time_steps
-    )
-    theta = read_fiber_angle_from_file(
-        U, output_folder + "/theta.xdmf"
-    )
+    active = read_active_strain_from_file(U, output_folder + "/active_strain.xdmf", num_time_steps)
+    theta = read_fiber_angle_from_file(U, output_folder + "/theta.xdmf")
     states = read_states_from_file(
         TH,
         output_folder + "/displacement.xdmf",
@@ -547,7 +524,7 @@ def solve_inverse_problem_phase1(
     geometry: Geometry,
     u_data: list[da.Function],
     number_of_iterations: int = 100,
-    output_folder: str = None,
+    output_folder: str | None = None,
 ) -> tuple[list[da.Function], list[da.Function], list[da.Function]]:
     """
 
@@ -568,7 +545,7 @@ def solve_inverse_problem_phase1(
     Returns:
         list of active strain fields, per time step
         fiber direction angle field
-        corresponding states (disp. and pressure) 
+        corresponding states (disp. and pressure)
 
     """
 
@@ -578,7 +555,7 @@ def solve_inverse_problem_phase1(
     # initial values; to be replaced as we progress more time steps
     active_strain = [da.Constant(0.0)]
     theta = da.Constant(0.0)
-    states = None
+    states = []
 
     active_strain_over_time = [None] * num_time_steps
     theta_over_time = [None] * num_time_steps
@@ -601,9 +578,7 @@ def solve_inverse_problem_phase1(
                 f"iteration {iteration_num} / {len(u_data)}",
                 flush=True,
             )
-            active_strain, theta, states = load_data(
-                output_folder_t, U, TH, 1
-            )
+            active_strain, theta, states = load_data(output_folder_t, U, TH, 1)
         else:
             print(
                 f"Starting inversion for time step {time_step}; "
@@ -633,14 +608,10 @@ def solve_inverse_problem_phase1(
                     output_folder_t,
                 )
 
-                write_inversion_statistics(
-                    tracked_quantities, output_folder_t
-                )
+                write_inversion_statistics(tracked_quantities, output_folder_t)
 
         theta_over_time[time_step] = da.project(theta, U)
-        active_strain_over_time[time_step] = da.project(
-            active_strain[0], U
-        )
+        active_strain_over_time[time_step] = da.project(active_strain[0], U)
         states_over_time[time_step] = states[0]
 
     return active_strain_over_time, theta_over_time, states_over_time
@@ -685,16 +656,11 @@ def solve_inverse_problem_phase2(
     U = df.FunctionSpace(geometry.mesh, "CG", 1)
 
     if input_folder is not None:
-
         for i in range(len(u_data)):
             data_it = input_folder + f"/iteration_{i}"
-            assert data_exist(
-                data_it
-            ), "Error: Input folder provided but data does not exist."
+            assert data_exist(data_it), "Error: Input folder provided but data does not exist."
 
-            active, theta, state = load_data(
-                data_it, U, TH, len(u_data)
-            )
+            active, theta, state = load_data(data_it, U, TH, len(u_data))
 
             active_over_time.append(active[0])
             theta_over_time.append(theta)
@@ -711,9 +677,7 @@ def solve_inverse_problem_phase2(
 
     else:
         num_time_step = len(u_data)
-        active_over_time = [
-            da.Function(U, name="Active strain")
-        ] * num_time_step
+        active_over_time = [da.Function(U, name="Active strain")] * num_time_step
         theta = da.Function(U, name="Theta")
         states = [da.Function(TH)] * num_time_step
 
@@ -756,9 +720,7 @@ def solve_inverse_problem_phase2(
     )
 
     if output_folder is not None:
-        write_inversion_results(
-            geometry.mesh, active_strain, theta, states, output_folder
-        )
+        write_inversion_results(geometry.mesh, active_strain, theta, states, output_folder)
 
         write_inversion_statistics(tracked_quantities, output_folder)
 
@@ -809,20 +771,16 @@ def solve_inverse_problem_phase3(
 
     if input_folders is not None:
         for folder in input_folders:
-            assert data_exist(
-                folder
-            ), f"Error: Data in folder {folder} do not exist."
+            assert data_exist(folder), f"Error: Data in folder {folder} do not exist."
             print(folder, len(u_data[0]))
-            active_strain, theta, states = load_data(
-                folder, U, TH, len(u_data[0])
-            )
+            active_strain, theta, states = load_data(folder, U, TH, len(u_data[0]))
 
             active_all += active_strain
             states_all += states
             theta_all.append(theta)
     else:
         N = len(u_data) * len(u_data[0])
-        active_over_time = [da.Function(U, name="Active strain")] * N
+        # active_over_time = [da.Function(U, name="Active strain")] * N
         states = [da.Function(TH)] * N
         theta = da.Function(U, name="Theta")
 
@@ -833,9 +791,7 @@ def solve_inverse_problem_phase3(
         ), "Error: number of time steps per dose needs to be the same!"
         u_data_all += u_d
 
-    assert len(active_all) == len(states_all) and len(
-        active_all
-    ) == len(
+    assert len(active_all) == len(states_all) and len(active_all) == len(
         u_data_all
     ), "Error: Active / states / data do not have the same length."
 
@@ -865,9 +821,7 @@ def solve_inverse_problem_phase3(
                 newtonsolver,
                 forward_problems,
                 state2,
-            ) = define_forward_problems(
-                geometry, [active], theta_t, init_states=[state]
-            )
+            ) = define_forward_problems(geometry, [active], theta_t, init_states=[state])
 
             solve_forward_problem_iteratively(
                 active,
@@ -894,6 +848,9 @@ def solve_inverse_problem_phase3(
         states_all_syncronized,
         number_of_iterations,
     )
+
+    if output_folders is None:
+        output_folders = []
 
     for i, output_folder in enumerate(output_folders):
         active_strain_per_dose = active_all[i * T : (i + 1) * T]

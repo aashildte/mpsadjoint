@@ -41,10 +41,7 @@ def read_active_strain_from_file(
 
     """
 
-    active_strain = [
-        da.Function(U, name="Active strain")
-        for _ in range(num_time_steps)
-    ]
+    active_strain = [da.Function(U, name="Active strain") for _ in range(num_time_steps)]
 
     with df.XDMFFile(filename) as fin:
         for i, active in enumerate(active_strain):
@@ -71,9 +68,7 @@ def write_active_strain_to_file(
     with df.XDMFFile(filename) as fout:
         for i, active in enumerate(active_strain):
             active_proj = da.project(active, U)
-            fout.write_checkpoint(
-                active_proj, "Active strain", i, append=True
-            )
+            fout.write_checkpoint(active_proj, "Active strain", i, append=True)
 
 
 def read_fiber_angle_from_file(
@@ -176,12 +171,8 @@ def write_states_to_file(
 
     for i, state in enumerate(states):
         u, p = state.split(deepcopy=True)
-        fout_disp.write_checkpoint(
-            u, "Displacement (µm)", i, append=True
-        )
-        fout_pressure.write_checkpoint(
-            p, "Pressure (kPa)", i, append=True
-        )
+        fout_disp.write_checkpoint(u, "Displacement (µm)", i, append=True)
+        fout_pressure.write_checkpoint(p, "Pressure (kPa)", i, append=True)
 
     fout_disp.close()
     fout_pressure.close()
@@ -250,9 +241,7 @@ def write_displacement_to_file(
     with df.XDMFFile(filename) as fout:
         for i, displacement in enumerate(displacements):
             disp_proj = df.project(displacement, V)
-            fout.write_checkpoint(
-                disp_proj, "Displacement (µm)", i, append=True
-            )
+            fout.write_checkpoint(disp_proj, "Displacement (µm)", i, append=True)
 
 
 def write_strain_to_file(
@@ -274,9 +263,7 @@ def write_strain_to_file(
     with df.XDMFFile(filename) as fout:
         for i, E in enumerate(strain_values):
             E_proj = df.project(E, T)
-            fout.write_checkpoint(
-                E_proj, "Green-Lagrange strain (-)", i, append=True
-            )
+            fout.write_checkpoint(E_proj, "Green-Lagrange strain (-)", i, append=True)
 
 
 def read_displacement_from_file(
@@ -298,10 +285,7 @@ def read_displacement_from_file(
 
     """
 
-    u = [
-        df.Function(V, name="Displacement (µm)")
-        for _ in range(num_time_steps)
-    ]
+    u = [df.Function(V, name="Displacement (µm)") for _ in range(num_time_steps)]
 
     with df.XDMFFile(filename) as fin:
         for t in range(num_time_steps):

@@ -69,13 +69,9 @@ def test_taylor_unit_cube():
 
     J = errornorm(u, u_synthetic, mesh)
 
-    reduced_functional = da.ReducedFunctional(
-        J, [da.Control(active_ctrl), da.Control(theta_ctrl)]
-    )
+    reduced_functional = da.ReducedFunctional(J, [da.Control(active_ctrl), da.Control(theta_ctrl)])
 
-    results = da.taylor_to_dict(
-        reduced_functional, [da.Function(U), da.Function(U)], h
-    )
+    results = da.taylor_to_dict(reduced_functional, [da.Function(U), da.Function(U)], h)
 
     assert min(results["R0"]["Rate"]) > 0.9
     assert min(results["R1"]["Rate"]) > 1.9

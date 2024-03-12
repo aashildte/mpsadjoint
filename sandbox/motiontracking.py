@@ -218,12 +218,11 @@ def process_displacement(path, reference_time_step):
     time = [dt * t for t in range(0, len(c2))]
 
     plt.plot(time, c2)
-
     plt.xlabel("Displacement (µm)")
     plt.ylabel("Time (ms)")
 
     print("Saving displacement trace to " + file_id + ".png")
-    # plt.savefig(file_id + "_beat.png", dpi=300)
+    plt.savefig(file_id + "_beat.png", dpi=300)
 
     # move time forward as first axis
     u1 = da.swapaxes(avg_beat, 1, 2)
@@ -231,7 +230,7 @@ def process_displacement(path, reference_time_step):
 
     # save dispacement here
     np.save(
-        f"{file_id}_displacement_avg_beat_smoothing_factor_5.npy",
+        f"{file_id}_displacement_avg_beat.npy",
         u2.compute(),
     )
 

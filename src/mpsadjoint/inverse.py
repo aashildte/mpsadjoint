@@ -2,7 +2,7 @@
 
 Code for solving the inverse problem; optimization part. Core part of the code.
 
-Åshild Telle, Henrik Finsberg / Simula Research Laboratory / 2024
+Åshild Telle / Simula Research Laboratory / 2024
 
 """
 

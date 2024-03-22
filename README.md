@@ -38,7 +38,9 @@ conda install -c conda-forge cyipopt
 ```
 
 ## Scripts
-The scripts folder contains script for the synthetic data and for running inversions in the three phases with brightfield data as input, which should be done in order.
+This code has developed for the paper "Estimation of active tension in cardiac microtissues by solving a PDE-constrained optimization problem". All figures should be reproduceable from the code here along with the data submitted with the paper.
+
+The scripts folder contains script for the synthetic data, and for running inversions in the three phases with brightfield data as input (in order, as described for each figure).
 
 ## Documentation
 See http://aashildte.github.io/mpsadjoint

@@ -2,7 +2,6 @@ from . import cardiac_mechanics
 from . import inverse
 from . import io_files
 from . import mesh_setup
-from . import motiontracking
 from . import mpsmechanics
 from . import nonlinearproblem
 
@@ -11,7 +10,6 @@ __all__ = [
     "inverse",
     "io_files",
     "mesh_setup",
-    "motiontracking",
     "mpsmechanics",
     "nonlinearproblem",
 ]

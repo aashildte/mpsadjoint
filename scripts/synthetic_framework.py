@@ -3,13 +3,12 @@ import numpy as np
 import dolfin as df
 import dolfin_adjoint as da
 
-from mpsadjoint.cardiac_mechanics import (
+from mpsadjoint import (
+    solve_inverse_problem,
     define_state_space,
     define_bcs,
     define_weak_form,
     set_fenics_parameters,
-)
-from mpsadjoint.io_files import (
     write_active_strain_to_file,
     write_fiber_angle_to_file,
     write_fiber_direction_to_file,
@@ -44,7 +43,7 @@ def generate_synthetic_data(geometry, active_strain, theta):
     set_fenics_parameters()
 
     mesh = geometry.mesh
-    # mesh_finer = df.refine(mesh)
+    mesh_finer = df.refine(mesh)
 
     TH = define_state_space(mesh)
     U = df.FunctionSpace(mesh, "CG", 1)
@@ -105,43 +104,89 @@ def inverse_crime(
     num_iterations_combined,
     noise_level_outer=0,
     noise_level_inner=0,
+    mat_params_tissue={},
 ):
+
     u_synthetic = generate_synthetic_data(geometry, active, theta)
     zero_dist = np.zeros_like(u_synthetic[0].vector()[:])
 
     np.random.seed(int(100 * noise_level_outer))
 
     if noise_level_outer > 0:
-        underlying_distribution = generate_noise_distribution(zero_dist, noise_level_outer)
+        underlying_distribution = generate_noise_distribution(
+            zero_dist, noise_level_outer
+        )
     else:
         underlying_distribution = zero_dist
+
+    np.save("underlying_distribution.npy", underlying_distribution)
+
+    num_time_steps = len(u_synthetic)
+    num_values = len(zero_dist)
+    u_synthetic_x = []
+    u_synthetic_y = []
+
+    # e1 = df.as_vector([1., 0.])
+    # e2 = df.as_vector([0., 1.])
+
+    U = df.FunctionSpace(geometry.mesh, "CG", 2)
+
+    for i in range(num_time_steps):
+        u_x = df.project(df.inner(u_synthetic[i], e1), U)
+        u_synthetic_x.append(u_x.vector()[:])
+
+        u_y = df.project(df.inner(u_synthetic[i], e2), U)
+        u_synthetic_y.append(u_y.vector()[:])
+
+        import IPython
+
+        IPython.embed()
+        exit()
+
+    np.save("displacement_x.npy", np.array(u_synthetic_x))
+    np.save("displacement_y.npy", np.array(u_synthetic_y))
 
     V2 = df.VectorFunctionSpace(geometry.mesh, "CG", 2)
     u_data = []
 
+    noise_over_time = np.zeros_like(u_synthetic_x)
+
     max_fact = 0
     for u in u_synthetic:
-        max_fact = max(max_fact, df.assemble(df.inner(u, u) * df.dx(geometry.mesh)) ** 0.5)
+        max_fact = max(
+            max_fact, df.assemble(df.inner(u, u) * df.dx(geometry.mesh)) ** 0.5
+        )
 
-    for u in u_synthetic:
+    for i, u in enumerate(u_synthetic):
         u_d = da.Function(V2)
 
         data_u = u.vector()[:]
         if noise_level_inner > 0:
-            noise_distribution_time_step = generate_noise_distribution(zero_dist, noise_level_inner)
+            noise_distribution_time_step = generate_noise_distribution(
+                zero_dist, noise_level_inner
+            )
         else:
             noise_distribution_time_step = zero_dist
 
-        scaling_factor = df.assemble(df.inner(u, u) * df.dx(geometry.mesh)) ** 0.5 / max_fact
+        scaling_factor = (
+            df.assemble(df.inner(u, u) * df.dx(geometry.mesh)) ** 0.5 / max_fact
+        )
 
         noise_fun = da.Function(u.function_space())
         noise_fun.vector()[:] = (
-            data_u + scaling_factor * noise_distribution_time_step + underlying_distribution
+            data_u
+            + scaling_factor * noise_distribution_time_step
+            + underlying_distribution
         )
+
+        noise_over_time[i, :] = scaling_factor * noise_distribution_time_step
 
         u_d.vector()[:] = da.project(noise_fun, V2).vector()[:]
 
         u_data.append(u_d)
+
+    np.save("noise_over_time.npy", noise_over_time)
+    exit()
 
     I = df.Identity(2)
     E_data = []
@@ -151,15 +196,15 @@ def inverse_crime(
         E_data.append(E)
 
     write_original_files(output_folder, geometry.mesh, active, theta, u_data, E_data)
-    """
+
     active_m, theta_m, _ = solve_inverse_problem(
         geometry,
         u_data,
         output_folder,
         num_iterations_iterative,
         num_iterations_combined,
+        mat_params_tissue,
     )
-    """
 
 
 def write_original_files(output_folder, mesh, active, theta, u_data, E_data):
@@ -167,7 +212,7 @@ def write_original_files(output_folder, mesh, active, theta, u_data, E_data):
     V1 = df.VectorFunctionSpace(mesh, "CG", 1)
     V2 = df.VectorFunctionSpace(mesh, "CG", 2)
     T1 = df.TensorFunctionSpace(mesh, "CG", 1)
-    # T2 = df.TensorFunctionSpace(mesh, "CG", 2)
+    T2 = df.TensorFunctionSpace(mesh, "CG", 2)
 
     filename_active = f"{output_folder}/active_strain_original.xdmf"
     if not os.path.isfile(filename_active):

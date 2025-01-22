@@ -1,8 +1,11 @@
+import os
 from argparse import ArgumentParser
 import numpy as np
+import matplotlib.pyplot as plt
 import dolfin_adjoint as da
 from scipy.special import gamma
-from mpsadjoint.mesh_setup import load_mesh_h5
+import dolfin as df
+from mpsadjoint import load_mesh_h5
 from synthetic_framework import inverse_crime
 
 
@@ -77,6 +80,20 @@ def parse_cl_arguments():
         help="Which mesh to use; given as charactheristic length (like 1p0, 0p5, ...)",
     )
 
+    parser.add_argument(
+        "--a_opt",
+        type=float,
+        default=2.28,
+        help="Change of isotropic linear contribution, changes material parameter for the opt. problem",
+    )
+
+    parser.add_argument(
+        "--af_opt",
+        type=float,
+        default=9.726,
+        help="Change of anisotropic linear contribution, changes material parameter for the opt. problem",
+    )
+
     d = parser.parse_args()
 
     assert d.active in [
@@ -103,6 +120,8 @@ def parse_cl_arguments():
         d.num_iterations_iterative,
         d.num_iterations_combined,
         d.mesh_resolution,
+        d.a_opt,
+        d.af_opt,
     )
 
 
@@ -114,7 +133,11 @@ def active_tension_fun(t):
     scaling_value = 0.2
 
     return (
-        scaling_value * 1 / (gamma(k) * theta**k) * ts ** (k - 1) * np.exp(-ts / theta)
+        scaling_value
+        * 1
+        / (gamma(k) * theta ** k)
+        * ts ** (k - 1)
+        * np.exp(-ts / theta)
         + baseline_value
     )
 
@@ -131,6 +154,8 @@ def synthetic_experiment():
         num_iterations_iterative,
         num_iterations_combined,
         mesh_res,
+        a_opt,
+        af_opt,
     ) = parse_cl_arguments()
 
     mesh_file = f"meshes4/chip_bayK_clmax_{mesh_res}.h5"
@@ -156,9 +181,11 @@ def synthetic_experiment():
         active_over_time.append(a)
 
     output_folder = (
-        f"new_experiments/inverse_synthetic_{mesh_res}_{start}_{stop}_{step_length}"
-        + f"_{active}_{fiber}_{noise_level}_{noise_level_time}"
+        f"synthetic_experiments_mat_params/inverse_synthetic_{mesh_res}_{start}_{stop}_{step_length}"
+        + f"_{active}_{fiber}_{noise_level}_{noise_level_time}_{a_opt}_{af_opt}"
     )
+
+    mat_params_tissue = {"a": da.Constant(a_opt), "af": da.Constant(af_opt)}
 
     inverse_crime(
         geometry,
@@ -169,6 +196,7 @@ def synthetic_experiment():
         num_iterations_combined,
         noise_level_outer=noise_level,
         noise_level_inner=noise_level_time,
+        mat_params_tissue=mat_params_tissue,
     )
 
 

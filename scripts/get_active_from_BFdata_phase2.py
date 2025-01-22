@@ -85,6 +85,20 @@ def parse_cl_arguments():
         help="Unit conversion parameter; length of each pixel in µm",
     )
 
+    parser.add_argument(
+        "--a_opt",
+        type=float,
+        default=2.28,
+        help="Change of isotropic linear contribution, changes material parameter for the opt. problem",
+    )
+
+    parser.add_argument(
+        "--af_opt",
+        type=float,
+        default=9.726,
+        help="Change of anisotropic linear contribution, changes material parameter for the opt. problem",
+    )
+
     d = parser.parse_args()
 
     return (
@@ -97,6 +111,8 @@ def parse_cl_arguments():
         d.displacement_file,
         d.mesh_file,
         d.um_per_pixel,
+        d.a_opt,
+        d.af_opt,
     )
 
 
@@ -110,6 +126,8 @@ def parse_cl_arguments():
     displacement_file,
     mesh_file,
     um_per_pixel,
+    a,
+    af,
 ) = parse_cl_arguments()
 
 
@@ -119,13 +137,16 @@ geometry = load_mesh_h5(mesh_file)
 # convert displacement data to Fenics functions
 
 displacement_data = np.load(displacement_file)
-u_data = mps_to_fenics(displacement_data, um_per_pixel, geometry.mesh, from_step, to_step)[
-    ::step_length
-]
+u_data = mps_to_fenics(
+    displacement_data, um_per_pixel, geometry.mesh, from_step, to_step
+)[::step_length]
 
 # get initial guesses from phase 1; save output data here after phase 2
 init_folder = f"{output_folder}/{study_id}/phase1"
 output_folder = f"{output_folder}/{study_id}/phase2"
 
 # solve the inverse problem in phase 2
-solve_inverse_problem_phase2(geometry, u_data, num_iterations, init_folder, output_folder)
+mat_params_tissue = {"a": a, "af": af}
+solve_inverse_problem_phase2(
+    geometry, u_data, num_iterations, init_folder, output_folder, mat_param_tissue
+)

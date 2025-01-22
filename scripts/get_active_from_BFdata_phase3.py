@@ -92,6 +92,20 @@ def parse_cl_arguments():
         help="Unit conversion parameter; length of each pixel in µm",
     )
 
+    parser.add_argument(
+        "--a_opt",
+        type=float,
+        default=2.28,
+        help="Change of isotropic linear contribution, changes material parameter for the opt. problem",
+    )
+
+    parser.add_argument(
+        "--af_opt",
+        type=float,
+        default=9.726,
+        help="Change of anisotropic linear contribution, changes material parameter for the opt. problem",
+    )
+
     d = parser.parse_args()
 
     return (
@@ -104,6 +118,8 @@ def parse_cl_arguments():
         d.displacement_files,
         d.mesh_file,
         d.um_per_pixel,
+        d.a_opt,
+        d.af_opt,
     )
 
 
@@ -117,10 +133,10 @@ def parse_cl_arguments():
     displacement_files,
     mesh_file,
     um_per_pixel,
+    a,
+    af,
 ) = parse_cl_arguments()
 
-print(displacement_files)
-print(study_idts)
 assert len(displacement_files) == len(
     study_idts
 ), "Error: Please provide one displacement file per study idt."
@@ -132,9 +148,9 @@ geometry = load_mesh_h5(mesh_file)
 u_data_all = []
 for displacement_file in displacement_files:
     displacement_data = np.load(displacement_file)
-    u_data = mps_to_fenics(displacement_data, um_per_pixel, geometry.mesh, from_step, to_step)[
-        ::step_length
-    ]
+    u_data = mps_to_fenics(
+        displacement_data, um_per_pixel, geometry.mesh, from_step, to_step
+    )[::step_length]
     u_data_all.append(u_data)
 
 # get initial guesses from phase 1; save output data here after phase 2
@@ -146,4 +162,7 @@ for study_id in study_idts:
     output_folders.append(f"{output_folder}/{study_id}/phase3")
 
 # solve the inverse problem in phase 3
-solve_inverse_problem_phase3(geometry, u_data_all, num_iterations, init_folders, output_folders)
+mat_params_tissue = {"a": a, "af": af}
+solve_inverse_problem_phase3(
+    geometry, u_data_all, num_iterations, init_folders, output_folders, a, af
+)

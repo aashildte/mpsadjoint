@@ -1,42 +1,22 @@
 """
 
-Loads mesh + boundary condition surfaces for the pillars (in which Robin BCs will be applied).
+Åshild Telle / Simula Research Laboratory / 2022
 
-Åshild Telle / Simula Research Laboratory / 2024
+Loads mesh + bc surfaces for pillars
 
 """
 
+import numpy as np
 import os
-import typing
 import dolfin as df
 import dolfin_adjoint as da
 from mpi4py import MPI
 from pathlib import Path
+from collections import namedtuple
 
+Geometry = namedtuple("Geometry", ["mesh", "ds"])
 
-class Geometry(typing.NamedTuple):
-    mesh: df.Mesh
-    ds: df.Measure
-
-
-def load_mesh_h5(
-    filename: typing.Union[str, os.PathLike],
-    save_pvd_file: bool = False,
-) -> Geometry:
-    """
-
-    Function for loading pre-constructed mesh from h5 file. This mesh should
-    match the tissue shape and is expected to have a meshfunction defining
-    the pillars.
-
-    Args:
-        filename - path to mesh file
-        save_pvd_file - if True, the mesh will be saved in a pvd file
-
-    Returns:
-        Geometry - nametuple with fields for mesh and pillars
-
-    """
+def load_mesh_h5(filename: os.PathLike, save_pvd_file: bool = False) -> Geometry:
 
     comm = MPI.COMM_WORLD
     filename = Path(filename)
@@ -60,6 +40,6 @@ def load_mesh_h5(
 
     print(f"Number of nodes: {nodes}, number of elements: {cells}")
 
-    ds = df.Measure("ds", domain=mesh, subdomain_data=pillar_bcs)
+    ds = df.Measure('ds', domain=mesh, subdomain_data=pillar_bcs)
 
     return Geometry(mesh=mesh, ds=ds)
